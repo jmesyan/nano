@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"nano/benchmark/testdata"
+	"github.com/jmesyan/nano/benchmark/testdata"
 )
 
 func TestProtobufSerialezer_Serialize(t *testing.T) {

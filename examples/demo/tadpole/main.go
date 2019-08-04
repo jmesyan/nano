@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"nano"
-	"nano/examples/demo/tadpole/logic"
-	"nano/serialize/json"
+	"github.com/jmesyan/nano"
+	"github.com/jmesyan/nano/examples/demo/tadpole/logic"
+	"github.com/jmesyan/nano/serialize/json"
 	"github.com/urfave/cli"
 )
 
@@ -15,9 +15,9 @@ func main() {
 	app := cli.NewApp()
 
 	app.Name = "tadpole"
-	app.Author = "nano authors"
+	app.Author = "github.com/jmesyan/nano authors"
 	app.Version = "0.0.1"
-	app.Copyright = "nano authors reserved"
+	app.Copyright = "github.com/jmesyan/nano authors reserved"
 	app.Usage = "tadpole"
 
 	// flags

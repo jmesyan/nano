@@ -30,8 +30,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"strings"
-	"time"
 	"sync/atomic"
+	"time"
 )
 
 var running int32
@@ -39,7 +39,7 @@ var running int32
 func listen(addr string, isWs bool, opts ...Option) {
 	// mark application running
 	if atomic.AddInt32(&running, 1) != 1 {
-		logger.Println("Nano has running")
+		logger.Println("github.com/jmesyan/nano has running")
 		return
 	}
 

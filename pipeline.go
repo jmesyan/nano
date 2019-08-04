@@ -2,8 +2,8 @@ package nano
 
 import (
 	"fmt"
-	"nano/internal/message"
-	"nano/session"
+	"github.com/jmesyan/nano/internal/message"
+	"github.com/jmesyan/nano/session"
 	"sync/atomic"
 )
 
@@ -71,7 +71,7 @@ func (p *pipelineChannel) Process(s *session.Session, msg Message) error {
 	}
 	for _, h := range p.handlers {
 		if err := h(s, msg); err != nil {
-			logger.Println(fmt.Sprintf("nano/handler: broken pipeline: %s", err.Error()))
+			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/handler: broken pipeline: %s", err.Error()))
 			return err
 		}
 	}

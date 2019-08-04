@@ -1,4 +1,4 @@
-module nano
+module github.com/jmesyan/nano
 
 go 1.12
 

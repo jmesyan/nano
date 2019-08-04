@@ -27,11 +27,11 @@ import (
 	"reflect"
 	"time"
 
-	"nano/component"
-	"nano/internal/codec"
-	"nano/internal/message"
-	"nano/internal/packet"
-	"nano/session"
+	"github.com/jmesyan/nano/component"
+	"github.com/jmesyan/nano/internal/codec"
+	"github.com/jmesyan/nano/internal/message"
+	"github.com/jmesyan/nano/internal/packet"
+	"github.com/jmesyan/nano/session"
 )
 
 // Unhandled message buffer size
@@ -102,7 +102,7 @@ func newHandlerService() *handlerService {
 func pcall(method reflect.Method, args []reflect.Value) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Println(fmt.Sprintf("nano/dispatch: %v", err))
+			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/dispatch: %v", err))
 			println(stack())
 		}
 	}()
@@ -118,7 +118,7 @@ func pcall(method reflect.Method, args []reflect.Value) {
 func pinvoke(fn func()) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Println(fmt.Sprintf("nano/invoke: %v", err))
+			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/invoke: %v", err))
 			println(stack())
 		}
 	}()
@@ -129,7 +129,7 @@ func pinvoke(fn func()) {
 func onSessionClosed(s *session.Session) {
 	defer func() {
 		if err := recover(); err != nil {
-			logger.Println(fmt.Sprintf("nano/onSessionClosed: %v", err))
+			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/onSessionClosed: %v", err))
 			println(stack())
 		}
 	}()
@@ -291,7 +291,7 @@ func (h *handlerService) processMessage(agent *agent, msg *message.Message) {
 
 	handler, ok := h.handlers[msg.Route]
 	if !ok {
-		logger.Println(fmt.Sprintf("nano/handler: %s not found(forgot registered?)", msg.Route))
+		logger.Println(fmt.Sprintf("github.com/jmesyan/nano/handler: %s not found(forgot registered?)", msg.Route))
 		return
 	}
 
