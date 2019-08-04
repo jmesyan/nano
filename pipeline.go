@@ -2,8 +2,8 @@ package nano
 
 import (
 	"fmt"
-	"github.com/lonng/nano/internal/message"
-	"github.com/lonng/nano/session"
+	"nano/internal/message"
+	"nano/session"
 	"sync/atomic"
 )
 

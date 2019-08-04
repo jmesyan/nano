@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/lonng/nano"
-	"github.com/lonng/nano/examples/demo/tadpole/logic"
-	"github.com/lonng/nano/serialize/json"
+	"nano"
+	"nano/examples/demo/tadpole/logic"
+	"nano/serialize/json"
 	"github.com/urfave/cli"
 )
 

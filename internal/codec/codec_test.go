@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/lonng/nano/internal/packet"
+	. "nano/internal/packet"
 )
 
 func TestPack(t *testing.T) {

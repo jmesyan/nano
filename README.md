@@ -2,10 +2,10 @@
 
 [1]: https://travis-ci.org/lonng/nano.svg?branch=master
 [2]: https://travis-ci.org/lonng/nano
-[3]: https://godoc.org/github.com/lonng/nano?status.svg
-[4]: https://godoc.org/github.com/lonng/nano
-[5]: https://goreportcard.com/badge/github.com/lonng/nano
-[6]: https://goreportcard.com/report/github.com/lonng/nano
+[3]: https://godoc.org/nano?status.svg
+[4]: https://godoc.org/nano
+[5]: https://goreportcard.com/badge/nano
+[6]: https://goreportcard.com/report/nano
 [7]: https://img.shields.io/badge/license-MIT-blue.svg
 [8]: LICENSE
 
