@@ -196,7 +196,6 @@ func (h *handlerService) register(comp component.Component, opts []component.Opt
 func (h *handlerService) handle(conn net.Conn) {
 	// create a client agent and startup write gorontine
 	agent := newAgent(conn, h.options)
-
 	// startup write goroutine
 	go agent.write()
 

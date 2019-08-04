@@ -9,6 +9,7 @@ import (
 type Logger interface {
 	Println(v ...interface{})
 	Fatal(v ...interface{})
+	Printf(format string, v ...interface{})
 }
 
 // Default logger

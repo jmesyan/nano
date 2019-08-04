@@ -22,12 +22,11 @@ package session
 
 import (
 	"errors"
+	"github.com/jmesyan/nano/service"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/jmesyan/nano/service"
 )
 
 // NetworkEntity represent low-level network instance
@@ -42,7 +41,8 @@ type NetworkEntity interface {
 
 var (
 	//ErrIllegalUID represents a invalid uid
-	ErrIllegalUID = errors.New("illegal uid")
+	ErrIllegalUID  = errors.New("illegal uid")
+	DefaultChannel = "hall"
 )
 
 // Session represents a client session which could storage temp data during low-level
@@ -56,6 +56,7 @@ type Session struct {
 	lastTime     int64                  // last heartbeat time
 	entity       NetworkEntity          // low-level network entity
 	data         map[string]interface{} // session data store
+	channel      string                 //channel
 }
 
 // New returns a new session instance
@@ -66,7 +67,18 @@ func New(entity NetworkEntity) *Session {
 		entity:   entity,
 		data:     make(map[string]interface{}),
 		lastTime: time.Now().Unix(),
+		channel:  DefaultChannel,
 	}
+}
+
+//get channnel
+func (s *Session) GetChannel() string {
+	return s.channel
+}
+
+//set channel
+func (s *Session) SetChannel(channel string) {
+	s.channel = channel
 }
 
 // Push message to client

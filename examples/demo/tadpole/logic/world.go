@@ -2,10 +2,10 @@ package logic
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano"
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/jmesyan/nano"
 	"github.com/jmesyan/nano/component"
 	"github.com/jmesyan/nano/examples/demo/tadpole/logic/protocol"
 	"github.com/jmesyan/nano/session"

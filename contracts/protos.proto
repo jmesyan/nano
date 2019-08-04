@@ -1,0 +1,40 @@
+syntax = "proto3";
+package contracts;
+
+message UserJoinRequest {
+    int32 uid = 1;
+    string connector = 2;
+    string channel = 3;
+}
+message UserjoinResponse{
+    int32 code = 1;
+}
+
+
+message UserLeaveRequest {
+    int32 uid = 1;
+}
+message UserLeaveResponse{
+    int32 code = 1;
+}
+
+message UserEnterRequest{
+    int32 uid = 1;
+    string gsid = 2;
+    string channel=3;
+}
+
+message UserEnterResponse{
+    int32 code = 1;
+}
+
+message UserDetailRequest{
+    int32 uid = 1;
+}
+
+message UserDetailResponse{
+    int32 uid = 1;
+    string channel =2; //通道
+    string connector_addr=3; //客户端地址
+    string gameServer_addr=4; //服务端地址
+}

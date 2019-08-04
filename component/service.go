@@ -22,6 +22,7 @@ package component
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -115,7 +116,8 @@ func (s *Service) ExtractHandler() error {
 		} else {
 			str = "type " + s.Name + " has no exported methods of suitable type"
 		}
-		return errors.New(str)
+		fmt.Println(str)
+		//return errors.New(str)
 	}
 
 	for i := range s.Handlers {
