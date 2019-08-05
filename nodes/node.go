@@ -53,7 +53,7 @@ const (
 type Node struct {
 	Nid        string
 	Name       string
-	Address    string
+	Gsid       string
 	Host       string
 	Port       int
 	Type       NodeType
