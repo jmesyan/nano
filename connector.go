@@ -50,7 +50,6 @@ type Connector struct {
 	status   int32                      // channel current status
 	sessions map[int64]*session.Session // session id map to session instance
 	listen   string
-	listenId string
 	client   *nats.Conn
 	msgch    chan *nats.Msg
 }
@@ -83,9 +82,10 @@ func NewConnector(opts ...ConnectorOpts) *Connector {
 
 func (c *Connector) Init() {
 	var err error
-	c.listenId = fmt.Sprintf("connector_%s", c.listen)
+	nid := generateNodeId(nodes.NodeConnector, "")
+	n := nodes.NewNode("connector", nid, nodes.NodeConnector)
+	c.node = n
 	c.client, err = nats.Connect(c.listen)
-	c.client.ConnectedAddr()
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -95,7 +95,12 @@ func (c *Connector) Init() {
 		logger.Fatal(err)
 		return
 	}
-	_, err = c.client.ChanSubscribe(fmt.Sprintf("%s.>", c.listenId), c.msgch)
+	_, err = c.client.ChanSubscribe("connector.>", c.msgch)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+	_, err = c.client.ChanSubscribe(fmt.Sprintf("%s.>", n.Nid), c.msgch)
 	if err != nil {
 		logger.Fatal(err)
 		return

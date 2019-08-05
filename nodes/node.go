@@ -1,7 +1,6 @@
 package nodes
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -87,22 +86,15 @@ func WithNodeUpInterval(d time.Duration) NodeOpts {
 		n.UpInterval = d
 	}
 }
-func (n *Node) GenerateNodeId(ntype NodeType, address, gsid string) string {
-	nkind := NodeTypesToKind[ntype]
-	if ntype == NodeGameServer {
-		return fmt.Sprintf("%s_%s", nkind, gsid)
-	}
-	return fmt.Sprintf("%s_%s", nkind, address)
-}
 
-func NewNode(name string, ntype NodeType, opts ...NodeOpts) *Node {
+func NewNode(name, nid string, ntype NodeType, opts ...NodeOpts) *Node {
 	node := &Node{
 		Name:       name,
+		Nid:        nid,
 		Type:       ntype,
-		Status:     NodeStarting,
+		Status:     NodeStarted,
 		UpInterval: time.Second,
 	}
-	node.Nid = node.GenerateNodeId(node.Type, node.Address, node.Gsid)
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			opt(node)

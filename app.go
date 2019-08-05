@@ -34,7 +34,10 @@ import (
 	"time"
 )
 
-var running int32
+var (
+	running    int32
+	listenAddr string
+)
 
 func listen(addr string, isWs bool, opts ...Option) {
 	// mark application running
@@ -44,7 +47,7 @@ func listen(addr string, isWs bool, opts ...Option) {
 	}
 
 	//record listen addr
-	ListenAddr = addr
+	listenAddr = addr
 	//opts
 	for _, opt := range opts {
 		opt(handler.options)

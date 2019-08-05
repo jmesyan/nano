@@ -24,6 +24,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"fmt"
+	"github.com/jmesyan/nano/nodes"
 	"net"
 	"os"
 	"runtime"
@@ -77,7 +79,7 @@ func stack() string {
 	})
 	return s[index+1:]
 }
-func getMACAddress() (string, error) {
+func getMacAddr() (string, error) {
 	netInterfaces, err := net.Interfaces()
 	if err != nil {
 		panic(err.Error())
@@ -99,4 +101,33 @@ func getMACAddress() (string, error) {
 		}
 	}
 	return mac, macerr
+}
+
+func generateNodeId(ntype nodes.NodeType, gsid string) string {
+	nkind := nodes.NodeTypesToKind[ntype]
+	if ntype == nodes.NodeGameServer {
+		return fmt.Sprintf("%s_%s", nkind, gsid)
+	}
+	address := generateLocalAddr()
+	return fmt.Sprintf("%s_%s", nkind, address)
+}
+
+func generateLocalAddr() string {
+	macaddr, err := getMacAddr()
+	if err != nil {
+		logger.Fatal(err)
+		return ""
+	}
+	if len(listenAddr) == 0 {
+		logger.Fatal("no listen addr")
+		return ""
+	}
+	ls, lp := strings.Split(listenAddr, ":"), "0"
+	if len(ls) == 2 {
+		lp = ls[1]
+	} else {
+		logger.Fatal("addr type is wrong")
+		return ""
+	}
+	return fmt.Sprintf("%s:%s", macaddr, lp)
 }
