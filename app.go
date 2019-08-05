@@ -43,6 +43,9 @@ func listen(addr string, isWs bool, opts ...Option) {
 		return
 	}
 
+	//record listen addr
+	ListenAddr = addr
+	//opts
 	for _, opt := range opts {
 		opt(handler.options)
 	}

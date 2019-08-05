@@ -23,6 +23,8 @@ package nano
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
+	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -74,4 +76,27 @@ func stack() string {
 		return count == skip
 	})
 	return s[index+1:]
+}
+func getMACAddress() (string, error) {
+	netInterfaces, err := net.Interfaces()
+	if err != nil {
+		panic(err.Error())
+	}
+	mac, macerr := "", errors.New("无法获取到正确的MAC地址")
+	for i := 0; i < len(netInterfaces); i++ {
+
+		if (netInterfaces[i].Flags&net.FlagUp) != 0 && (netInterfaces[i].Flags&net.FlagLoopback) == 0 {
+			addrs, _ := netInterfaces[i].Addrs()
+			for _, address := range addrs {
+				ipnet, ok := address.(*net.IPNet)
+
+				if ok && ipnet.IP.IsGlobalUnicast() {
+
+					mac = netInterfaces[i].HardwareAddr.String()
+					return mac, nil
+				}
+			}
+		}
+	}
+	return mac, macerr
 }

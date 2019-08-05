@@ -54,14 +54,28 @@ type Node struct {
 	Nid        string
 	Name       string
 	Gsid       string
-	Host       string
-	Port       int
+	Address    string
 	Type       NodeType
 	Status     NodeStatus
 	UpInterval time.Duration
 }
 type NodeOpts func(n *Node)
 
+func WithNodeID(nid string) NodeOpts {
+	return func(n *Node) {
+		n.Nid = nid
+	}
+}
+func WithNodeAddress(addr string) NodeOpts {
+	return func(n *Node) {
+		n.Address = addr
+	}
+}
+func WithNodeGsid(gsid string) NodeOpts {
+	return func(n *Node) {
+		n.Gsid = gsid
+	}
+}
 func WithNodeStatus(status NodeStatus) NodeOpts {
 	return func(n *Node) {
 		n.Status = status
@@ -73,24 +87,22 @@ func WithNodeUpInterval(d time.Duration) NodeOpts {
 		n.UpInterval = d
 	}
 }
-func (n *Node) GenerateNodeId(kind, address string) string {
-	return fmt.Sprintf("%s_%s", kind, address)
-}
-func (n *Node) GenerateAddress() {
-	n.Address = fmt.Sprintf("%s:%d", n.Host, n.Port)
+func (n *Node) GenerateNodeId(ntype NodeType, address, gsid string) string {
+	nkind := NodeTypesToKind[ntype]
+	if ntype == NodeGameServer {
+		return fmt.Sprintf("%s_%s", nkind, gsid)
+	}
+	return fmt.Sprintf("%s_%s", nkind, address)
 }
 
-func NewNode(name, host string, port int, ntype NodeType, opts ...NodeOpts) *Node {
+func NewNode(name string, ntype NodeType, opts ...NodeOpts) *Node {
 	node := &Node{
 		Name:       name,
-		Host:       host,
-		Port:       port,
 		Type:       ntype,
 		Status:     NodeStarting,
 		UpInterval: time.Second,
 	}
-	node.GenerateAddress()
-	node.Nid = node.GenerateNodeId(NodeTypesToKind[ntype], node.Address)
+	node.Nid = node.GenerateNodeId(node.Type, node.Address, node.Gsid)
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			opt(node)
