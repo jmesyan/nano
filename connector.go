@@ -22,7 +22,6 @@ package nano
 
 import (
 	"fmt"
-	"github.com/jmesyan/nano/discovery"
 	"github.com/jmesyan/nano/nodes"
 	"github.com/jmesyan/nano/session"
 	"github.com/nats-io/nats.go"
@@ -126,16 +125,12 @@ func (c *Connector) watcher() {
 		select {
 		case msg := <-c.msgch:
 			c.HandleMsg(msg)
-		case <-this.shut:
-			discovery.Discover.DeRegister(this.Node.Address)
-			logger.Infof("receive stop msg")
-			return
 		}
 	}
 }
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
-	kickTopic := fmt.Sprintf("%s.%s", this.Node.Nid, "kick")
+	kickTopic := fmt.Sprintf("%s.%s", c.node.Nid, "kick")
 	logger.Printf("the HandleMsg kick topic is:%s", kickTopic)
 	switch msg.Subject {
 	case kickTopic:
@@ -240,12 +235,6 @@ func (c *Connector) Add(s *session.Session) error {
 	}
 
 	c.sessions[id] = s
-	if _, ok := c.channels[s.Channel]; ok {
-		c.channels[s.Channel][id] = s
-	} else {
-		c.channels[s.Channel] = make(map[int64]*session.Session)
-		c.channels[s.Channel][id] = s
-	}
 	return nil
 }
 
@@ -263,9 +252,6 @@ func (c *Connector) Leave(s *session.Session) error {
 	defer c.mu.Unlock()
 
 	delete(c.sessions, s.ID())
-	if _, ok := c.channels[s.Channel]; ok {
-		delete(c.channels[s.Channel], s.ID())
-	}
 	return nil
 }
 
@@ -279,7 +265,6 @@ func (c *Connector) LeaveAll() error {
 	defer c.mu.Unlock()
 
 	c.sessions = make(map[int64]*session.Session)
-	c.channels = make(map[string]map[int64]*session.Session)
 	return nil
 }
 

@@ -25,9 +25,9 @@ import "errors"
 // Errors that could be occurred during message handling.
 var (
 	ErrSessionOnNotify    = errors.New("current session working on notify mode")
-	ErrCloseClosedGroup   = errors.New("close closed group")
-	ErrClosedGroup        = errors.New("group closed")
-	ErrMemberNotFound     = errors.New("member not found in the group")
+	ErrCloseClosedConnector   = errors.New("close closed connector")
+	ErrClosedConnector       = errors.New("connector closed")
+	ErrMemberNotFound     = errors.New("member not found in the connector")
 	ErrCloseClosedSession = errors.New("close closed session")
-	ErrSessionDuplication = errors.New("session has existed in the current group")
+	ErrSessionDuplication = errors.New("session has existed in the current connector")
 )

@@ -85,7 +85,7 @@ func newAgent(conn net.Conn, options *options) *agent {
 
 	// binding session
 	s := session.New(a)
-	groupHandler.Add(s)
+	ConnectorHandler.Add(s)
 	a.session = s
 	a.srv = reflect.ValueOf(s)
 
