@@ -217,6 +217,7 @@ func (c *Connector) PushMsg(connector string, uid int, route string, data interf
 	if err != nil {
 		return err
 	}
+	fmt.Println("pushmsg connent:", topic, uid, route, data)
 	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
 	if err != nil {
 		return err
