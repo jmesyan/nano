@@ -215,8 +215,6 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		err = sess.Push(payload.Route, payload.Msg)
 		if err != nil {
 			logger.Println(err)
-			msg.Respond(ResponseFail)
-			return
 		}
 		msg.Respond(ResponseSuccess)
 	}
@@ -235,7 +233,6 @@ func (c *Connector) PushMsg(connector string, uid int, route string, data map[st
 	if err != nil {
 		return err
 	}
-	fmt.Println("pushmsg connent:", topic, uid, route, data)
 	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
 	if err != nil {
 		return err
