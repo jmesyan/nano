@@ -182,53 +182,57 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		msg.Respond(ResponseFail)
 		return
 	}
+	uid := payload.Receiver.Uid
+	sid := payload.Receiver.Sid
+	nid := payload.Receiver.Nid
 	switch msg.Subject {
 	case c.kickTopic:
 		//收到踢人消息
-		sess, err := c.Member(payload.Uid)
-		if err != nil {
-			logger.Println(err)
-			msg.Respond(ResponseFail)
-			return
+		if nid == c.node.Nid {
+			sess, err := c.Member(uid)
+			if err != nil {
+				logger.Println(err)
+				msg.Respond(ResponseFail)
+				return
+			}
+			if sid == sess.ID() {
+				c.DelMember(uid)
+				c.RemoveUser(uid)
+			}
 		}
-		data := payload.Msg
-		var sid int64
-		var addr string
-		if tmp, ok := data["id"]; ok {
-			sid = int64(tmp.(float64))
-		}
-		if tmp, ok := data["addr"]; ok {
-			addr = tmp.(string)
-		}
-		if addr == c.node.Address && sid == sess.ID() {
-			c.DelMember(payload.Uid)
-		}
-		c.RemoveUser(payload.Uid)
-		msg.Respond(ResponseSuccess)
 	case c.pushTopic:
-		sess, err := c.Member(payload.Uid)
-		if err != nil {
-			logger.Println(err)
-			msg.Respond(ResponseFail)
-			return
+		if nid == c.node.Nid {
+			sess, err := c.Member(uid)
+			if err != nil {
+				logger.Println(err)
+				msg.Respond(ResponseFail)
+				return
+			}
+			if sid == sess.ID() {
+				err = sess.Push(payload.Route, payload.Msg)
+				if err != nil {
+					logger.Println(err)
+				}
+			}
 		}
-		err = sess.Push(payload.Route, payload.Msg)
-		if err != nil {
-			logger.Println(err)
-		}
-		msg.Respond(ResponseSuccess)
 	}
+	msg.Respond(ResponseSuccess)
 }
 
+type MsgReceiver struct {
+	Uid int    `json:"uid"`
+	Sid int64  `json:"sid"`
+	Nid string `json:"nid"`
+}
 type MsgLoad struct {
-	Uid   int                    `json:"uid"`
-	Route string                 `json:"route"`
-	Msg   map[string]interface{} `json:"msg"`
+	Receiver *MsgReceiver           `json:"receiver"`
+	Route    string                 `json:"route"`
+	Msg      map[string]interface{} `json:"msg"`
 }
 
-func (c *Connector) PushMsg(connector string, uid int, route string, data map[string]interface{}) error {
+func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
 	topic := generateTopic(connector, "push")
-	payload := &MsgLoad{Uid: uid, Route: route, Msg: data}
+	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
 	load, err := serializer.Marshal(payload)
 	if err != nil {
 		return err
@@ -244,9 +248,9 @@ func (c *Connector) PushMsg(connector string, uid int, route string, data map[st
 	return errors.New(resp)
 }
 
-func (c *Connector) KickUser(connector string, uid int, data map[string]interface{}) error {
+func (c *Connector) KickUser(connector string, receiver *MsgReceiver) error {
 	topic := generateTopic(connector, "kick")
-	payload := &MsgLoad{Uid: uid, Msg: data}
+	payload := &MsgLoad{Receiver: receiver}
 	load, err := serializer.Marshal(payload)
 	if err != nil {
 		return err
@@ -280,7 +284,6 @@ func (c *Connector) RemoveUser(uid int) error {
 	err := dcm.DCManager.DelValue(key)
 	if err != nil {
 		return err
-
 	}
 	return nil
 }

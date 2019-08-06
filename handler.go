@@ -206,6 +206,7 @@ func (h *handlerService) handle(conn net.Conn) {
 	// guarantee agent related resource be destroyed
 	defer func() {
 		agent.Close()
+		ConnectorHandler.Leave(agent.session)
 		if env.debug {
 			logger.Println(fmt.Sprintf("Session read goroutine exit, SessionID=%d, UID=%d", agent.session.ID(), agent.session.UID()))
 		}
