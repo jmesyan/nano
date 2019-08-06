@@ -195,7 +195,7 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		var sid int64
 		var addr string
 		if tmp, ok := data["id"]; ok {
-			sid = tmp.(int64)
+			sid = int64(tmp.(float64))
 		}
 		if tmp, ok := data["addr"]; ok {
 			addr = tmp.(string)
