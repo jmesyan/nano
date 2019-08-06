@@ -193,18 +193,18 @@ func (c *Connector) KickUser(connector string, uid int) error {
 	return errors.New(resp)
 }
 
-func (c *Connector) StoreUser(uid int, data *users.User) (bool, error) {
+func (c *Connector) StoreUser(uid int, data *users.User) error {
 	user, err := serializer.Marshal(data)
 	if err != nil {
-		return false, err
+		return err
 	}
 	key := fmt.Sprintf("user_%d", uid)
 	err = dcm.DCManager.SetValue(key, user)
 	if err != nil {
-		return false, err
+		return err
 
 	}
-	return true, nil
+	return nil
 }
 
 func (c *Connector) GetUser(uid int) *users.User {
