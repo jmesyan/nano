@@ -35,6 +35,8 @@ import (
 
 var (
 	ConnectorHandler *Connector
+	ResponseSuccess  = []byte("SUCCESS")
+	ResponseFail     = []byte("FAIL")
 )
 
 const (
@@ -122,8 +124,8 @@ func (c *Connector) Init() {
 		return
 	}
 	//设置topic
-	c.kickTopic = fmt.Sprintf("%s.%s", c.node.Nid, "kick")
-	c.pushTopic = fmt.Sprintf("%s.%s", c.node.Nid, "push")
+	c.kickTopic = generateTopic(c.node.Nid, "kick")
+	c.pushTopic = generateTopic(c.node.Nid, "push")
 }
 
 func (c *Connector) AfterInit() {
@@ -131,24 +133,24 @@ func (c *Connector) AfterInit() {
 }
 
 // Member returns specified UID's session
-func (c *Connector) Member(uid int64) (*session.Session, error) {
+func (c *Connector) Member(uid int) (*session.Session, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
+	nuid := int64(uid)
 	for _, s := range c.sessions {
-		if s.UID() == uid {
+		if s.UID() == nuid {
 			return s, nil
 		}
 	}
 
 	return nil, ErrMemberNotFound
 }
-func (c *Connector) DelMember(uid int64) {
+func (c *Connector) DelMember(uid int) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
+	nuid := int64(uid)
 	for _, s := range c.sessions {
-		if s.UID() == uid {
+		if s.UID() == nuid {
 			logger.Printf("del member, id=>%d, uid=>%d", s.ID(), s.UID())
 			s.Close()
 			delete(c.sessions, s.ID())
@@ -173,18 +175,49 @@ func (c *Connector) watcher() {
 
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
+	payload := &MsgLoad{}
+	err := serializer.Unmarshal(msg.Data, payload)
+	if err != nil {
+		logger.Println(err)
+		msg.Respond(ResponseFail)
+		return
+	}
 	switch msg.Subject {
 	case c.kickTopic:
 		//收到踢人消息
-		uid := StringToInt64(string(msg.Data))
-		c.DelMember(uid)
-		msg.Respond([]byte("SUCCESS"))
+		c.DelMember(payload.Uid)
+		msg.Respond(ResponseSuccess)
+	case c.pushTopic:
+		sess, err := c.Member(payload.Uid)
+		if err != nil {
+			logger.Println(err)
+			msg.Respond(ResponseFail)
+			return
+		}
+		err = sess.Push(payload.Route, payload.Msg)
+		if err != nil {
+			logger.Println(err)
+			msg.Respond(ResponseFail)
+			return
+		}
+		msg.Respond(ResponseSuccess)
 	}
 }
 
-func (c *Connector) PushMsg(connector string, uid int, data interface{}) error {
+type MsgLoad struct {
+	Uid   int         `json:"uid"`
+	Route string      `json:"route"`
+	Msg   interface{} `json:"msg"`
+}
 
-	msg, err := c.client.Request(c.pushTopic, []byte(IntToString(uid)), 10*time.Millisecond)
+func (c *Connector) PushMsg(connector string, uid int, route string, data interface{}) error {
+	topic := generateTopic(connector, "push")
+	payload := &MsgLoad{Uid: uid, Route: route, Msg: data}
+	load, err := serializer.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
 	if err != nil {
 		return err
 	}
@@ -196,7 +229,13 @@ func (c *Connector) PushMsg(connector string, uid int, data interface{}) error {
 }
 
 func (c *Connector) KickUser(connector string, uid int) error {
-	msg, err := c.client.Request(c.kickTopic, []byte(IntToString(uid)), 10*time.Millisecond)
+	topic := generateTopic(connector, "kick")
+	payload := &MsgLoad{Uid: uid}
+	load, err := serializer.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
 	if err != nil {
 		return err
 	}
@@ -321,7 +360,7 @@ func (c *Connector) Broadcast(route string, v interface{}) error {
 }
 
 // Contains check whether a UID is contained in current connector or not
-func (c *Connector) Contains(uid int64) bool {
+func (c *Connector) Contains(uid int) bool {
 	_, err := c.Member(uid)
 	return err == nil
 }

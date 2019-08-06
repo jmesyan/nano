@@ -133,6 +133,10 @@ func generateLocalAddr() string {
 	return fmt.Sprintf("%s:%s", macaddr, lp)
 }
 
+func generateTopic(s ...string) string {
+	return strings.Join(s, ".")
+}
+
 func StringToInt(valstr string) int {
 	val, err := strconv.Atoi(valstr)
 	if err != nil {
