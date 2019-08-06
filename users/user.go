@@ -1,8 +1,9 @@
 package users
 
 type User struct {
-	Uid            int    //用户ID
-	Channel        string //通道
-	ConnectorAddr  string //客户端地址
-	GameServerAddr string //服务端地址
+	Sid            int    `json:"sid"`             // session_id
+	Uid            int    `json:"uid"`             //用户ID
+	Channel        string `json:"channel"`         //通道
+	ConnectorAddr  string `json:"connector_addr"`  //客户端地址
+	GameserverAddr string `json:"gameserver_addr"` //服务端地址
 }
