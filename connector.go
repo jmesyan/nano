@@ -193,10 +193,14 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		}
 		data := payload.Msg.(map[string]interface{})
 		var sid int64
+		var addr string
 		if tmp, ok := data["id"]; ok {
 			sid = tmp.(int64)
 		}
-		if sid == sess.ID() {
+		if tmp, ok := data["addr"]; ok {
+			addr = tmp.(string)
+		}
+		if addr == c.node.Address && sid == sess.ID() {
 			c.DelMember(payload.Uid)
 		}
 		msg.Respond(ResponseSuccess)
