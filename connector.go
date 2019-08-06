@@ -82,7 +82,14 @@ func NewConnector(opts ...ConnectorOpts) *Connector {
 	}
 	ConnectorHandler = c
 	return c
+}
 
+func (c *Connector) NID() string {
+	return c.node.Nid
+}
+
+func (c *Connector) Status() nodes.NodeStatus {
+	return c.node.Status
 }
 
 func (c *Connector) Init() {
@@ -152,6 +159,7 @@ func (c *Connector) watcher() {
 		case <-c.shut:
 			logger.Println("receive stop msg")
 			close(c.msgch)
+			c.node.Status = nodes.NodeStoping
 			return
 		}
 	}
@@ -225,6 +233,7 @@ func (c *Connector) Shutdown() {
 		fmt.Println(err)
 	}
 	close(c.shut)
+	c.node.Status = nodes.NodeStoped
 }
 
 // Members returns all member's UID in current connector
