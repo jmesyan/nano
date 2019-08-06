@@ -21,6 +21,7 @@
 package nano
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
@@ -178,19 +179,18 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 	}
 }
 
-func (c *Connector) KickUser(connector string, uid int) (bool, error) {
+func (c *Connector) KickUser(connector string, uid int) error {
 	topic := fmt.Sprintf("%s.%s", connector, "kick")
 	logger.Printf("the kick topic is:%s", topic)
 	msg, err := c.client.Request(topic, []byte(IntToString(uid)), 10*time.Millisecond)
 	if err != nil {
-		logger.Println(err)
-		return false, err
+		return err
 	}
 	resp := string(msg.Data)
 	if resp == "SUCCESS" {
-		return true, nil
+		return nil
 	}
-	return false, nil
+	return errors.New(resp)
 }
 
 func (c *Connector) StoreUser(uid int, data *users.User) (bool, error) {
