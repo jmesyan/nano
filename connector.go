@@ -203,6 +203,7 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		if addr == c.node.Address && sid == sess.ID() {
 			c.DelMember(payload.Uid)
 		}
+		c.RemoveUser(payload.Uid)
 		msg.Respond(ResponseSuccess)
 	case c.pushTopic:
 		sess, err := c.Member(payload.Uid)
@@ -271,6 +272,15 @@ func (c *Connector) StoreUser(uid int, data *users.User) error {
 	}
 	key := fmt.Sprintf("user_%d", uid)
 	err = dcm.DCManager.SetValue(key, user)
+	if err != nil {
+		return err
+
+	}
+	return nil
+}
+func (c *Connector) RemoveUser(uid int) error {
+	key := fmt.Sprintf("user_%d", uid)
+	err := dcm.DCManager.DelValue(key)
 	if err != nil {
 		return err
 
