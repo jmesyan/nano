@@ -196,7 +196,7 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 				return
 			}
 			if sid == sess.ID() {
-				c.DelMember(uid)
+				c.Leave(sess)
 				c.RemoveUser(uid)
 			}
 		}
