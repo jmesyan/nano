@@ -185,7 +185,20 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 	switch msg.Subject {
 	case c.kickTopic:
 		//收到踢人消息
-		c.DelMember(payload.Uid)
+		sess, err := c.Member(payload.Uid)
+		if err != nil {
+			logger.Println(err)
+			msg.Respond(ResponseFail)
+			return
+		}
+		data := payload.Msg.(map[string]interface{})
+		var sid int64
+		if tmp, ok := data["id"]; ok {
+			sid = tmp.(int64)
+		}
+		if sid == sess.ID() {
+			c.DelMember(payload.Uid)
+		}
 		msg.Respond(ResponseSuccess)
 	case c.pushTopic:
 		sess, err := c.Member(payload.Uid)
@@ -229,9 +242,9 @@ func (c *Connector) PushMsg(connector string, uid int, route string, data interf
 	return errors.New(resp)
 }
 
-func (c *Connector) KickUser(connector string, uid int) error {
+func (c *Connector) KickUser(connector string, uid int, data interface{}) error {
 	topic := generateTopic(connector, "kick")
-	payload := &MsgLoad{Uid: uid}
+	payload := &MsgLoad{Uid: uid, Msg: data}
 	load, err := serializer.Marshal(payload)
 	if err != nil {
 		return err
