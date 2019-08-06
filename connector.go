@@ -22,6 +22,7 @@ package nano
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
 	"github.com/jmesyan/nano/session"
 	"github.com/nats-io/nats.go"
@@ -52,6 +53,7 @@ type Connector struct {
 	listen   string
 	client   *nats.Conn
 	msgch    chan *nats.Msg
+	shut     chan struct{}
 }
 
 type ConnectorOpts func(g *Connector)
@@ -69,6 +71,7 @@ func NewConnector(opts ...ConnectorOpts) *Connector {
 		sessions: make(map[int64]*session.Session),
 		listen:   nats.DefaultURL,
 		msgch:    make(chan *nats.Msg, 64),
+		shut:     make(chan struct{}, 1),
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -83,7 +86,8 @@ func NewConnector(opts ...ConnectorOpts) *Connector {
 func (c *Connector) Init() {
 	var err error
 	nid := generateNodeId(nodes.NodeConnector, "")
-	n := nodes.NewNode("connector", nid, nodes.NodeConnector)
+	n := nodes.NewNode("connector", nid, nodes.NodeConnector, nodes.WithNodeAddress(generateLocalAddr()))
+	dcm.RegisterNode(nid, n)
 	c.node = n
 	c.client, err = nats.Connect(c.listen)
 	if err != nil {
@@ -108,7 +112,7 @@ func (c *Connector) Init() {
 }
 
 func (c *Connector) AfterInit() {
-
+	go c.watcher()
 }
 
 // Member returns specified UID's session
@@ -130,6 +134,10 @@ func (c *Connector) watcher() {
 		select {
 		case msg := <-c.msgch:
 			c.HandleMsg(msg)
+		case <-c.shut:
+			logger.Println("receive stop msg")
+			close(c.msgch)
+			return
 		}
 	}
 }
@@ -142,6 +150,18 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		//收到踢人消息
 		msg.Respond([]byte("SUCCESS"))
 	}
+}
+
+func (c *Connector) BeforeShutdown() {
+	c.shut <- struct{}{}
+}
+
+func (c *Connector) Shutdown() {
+	err := dcm.DeRegisterNode(c.node.Nid)
+	if err != nil {
+		fmt.Println(err)
+	}
+	close(c.shut)
 }
 
 // Members returns all member's UID in current connector
@@ -299,4 +319,9 @@ func (c *Connector) Close() error {
 	// release all reference
 	c.sessions = make(map[int64]*session.Session)
 	return nil
+}
+
+func init() {
+	ConnectorHandler = NewConnector()
+	Register(ConnectorHandler)
 }

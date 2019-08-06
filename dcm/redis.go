@@ -20,6 +20,9 @@ type RedisDCM struct {
 
 func WithAddrs(addrs []string) RedisDCMOpts {
 	return func(r *RedisDCM) {
+		if r.options == nil {
+			r.options = &redis.ClusterOptions{}
+		}
 		r.options.Addrs = addrs
 	}
 }

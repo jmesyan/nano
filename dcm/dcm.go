@@ -2,6 +2,7 @@ package dcm
 
 import (
 	"github.com/jmesyan/nano/nodes"
+	"github.com/jmesyan/nano/serialize/json"
 	"log"
 	"os"
 )
@@ -23,8 +24,9 @@ type DCM interface {
 }
 
 var (
-	DCManager DCM
-	logger    = log.New(os.Stderr, "DCManger", log.LstdFlags|log.Llongfile)
+	DCManager  DCM
+	logger     = log.New(os.Stderr, "DCManger", log.LstdFlags|log.Llongfile)
+	serializer = json.NewSerializer()
 )
 
 func init() {
@@ -32,8 +34,11 @@ func init() {
 }
 
 func RegisterNode(nid string, node *nodes.Node) error {
-
-	DCManager.SetValue(nid)
+	data, err := serializer.Marshal(node)
+	if err != nil {
+		return err
+	}
+	return DCManager.SetValue(nid, data)
 }
 
 func DeRegisterNode(nid string) error {

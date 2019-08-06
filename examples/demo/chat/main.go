@@ -15,7 +15,6 @@ import (
 
 type (
 	Room struct {
-		group *nano.Group
 	}
 
 	// RoomManager represents a component that contains a bundle of room
@@ -89,16 +88,18 @@ func (mgr *RoomManager) AfterInit() {
 		if !s.HasKey(roomIDKey) {
 			return
 		}
-		room := s.Value(roomIDKey).(*Room)
-		room.group.Leave(s)
 	})
 	mgr.timer = nano.NewTimer(time.Minute, func() {
-		for roomId, room := range mgr.rooms {
+		for roomId, _ := range mgr.rooms {
 			println(fmt.Sprintf("UserCount: RoomID=%d, Time=%s, Count=%d",
-				roomId, time.Now().String(), room.group.Count()))
+				roomId, time.Now().String(), assist.Count()))
 		}
 	})
 }
+
+var (
+	assist = nano.ConnectorHandler
+)
 
 // Join room
 func (mgr *RoomManager) Join(s *session.Session, msg []byte) error {
@@ -106,7 +107,7 @@ func (mgr *RoomManager) Join(s *session.Session, msg []byte) error {
 	room, found := mgr.rooms[testRoomID]
 	if !found {
 		room = &Room{
-			group: nano.NewGroup(fmt.Sprintf("room-%d", testRoomID)),
+			//group: nano.NewGroup(fmt.Sprintf("room-%d", testRoomID)),
 		}
 		mgr.rooms[testRoomID] = room
 	}
@@ -114,11 +115,11 @@ func (mgr *RoomManager) Join(s *session.Session, msg []byte) error {
 	fakeUID := s.ID() //just use s.ID as uid !!!
 	s.Bind(fakeUID)   // binding session uids.Set(roomIDKey, room)
 	s.Set(roomIDKey, room)
-	s.Push("onMembers", &AllMembers{Members: room.group.Members()})
+	s.Push("onMembers", &AllMembers{Members: assist.Members()})
 	// notify others
-	room.group.Broadcast("onNewUser", &NewUser{Content: fmt.Sprintf("New user: %d", s.ID())})
+	assist.Broadcast("onNewUser", &NewUser{Content: fmt.Sprintf("New user: %d", s.ID())})
 	// new user join group
-	room.group.Add(s) // add session to group
+	assist.Add(s) // add session to group
 	return s.Response(&JoinResponse{Result: "success"})
 }
 
@@ -127,8 +128,8 @@ func (mgr *RoomManager) Message(s *session.Session, msg *UserMessage) error {
 	if !s.HasKey(roomIDKey) {
 		return fmt.Errorf("not join room yet")
 	}
-	room := s.Value(roomIDKey).(*Room)
-	return room.group.Broadcast("onMessage", msg)
+	//room := s.Value(roomIDKey).(*Room)
+	return nil
 }
 
 func main() {

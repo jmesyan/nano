@@ -1,9 +1,5 @@
 package nodes
 
-import (
-	"time"
-)
-
 var (
 	NodeTypesToKind = map[NodeType]string{
 		NodeMaster:     "master",
@@ -50,13 +46,12 @@ const (
 )
 
 type Node struct {
-	Nid        string
-	Name       string
-	Gsid       string
-	Address    string
-	Type       NodeType
-	Status     NodeStatus
-	UpInterval time.Duration
+	Nid     string     `json:"nid"`
+	Name    string     `json:"name"`
+	Gsid    string     `json:"gsid"`
+	Address string     `json:"address"`
+	Type    NodeType   `json:"type"`
+	Status  NodeStatus `json:"status"`
 }
 type NodeOpts func(n *Node)
 
@@ -81,19 +76,12 @@ func WithNodeStatus(status NodeStatus) NodeOpts {
 	}
 }
 
-func WithNodeUpInterval(d time.Duration) NodeOpts {
-	return func(n *Node) {
-		n.UpInterval = d
-	}
-}
-
 func NewNode(name, nid string, ntype NodeType, opts ...NodeOpts) *Node {
 	node := &Node{
-		Name:       name,
-		Nid:        nid,
-		Type:       ntype,
-		Status:     NodeStarted,
-		UpInterval: time.Second,
+		Name:   name,
+		Nid:    nid,
+		Type:   ntype,
+		Status: NodeStarted,
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
