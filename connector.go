@@ -49,14 +49,16 @@ type SessionFilter func(*session.Session) bool
 // Connector represents a session connector which used to manage a number of
 // sessions, data send to the connector will send to all session in it.
 type Connector struct {
-	node     *nodes.Node
-	mu       sync.RWMutex
-	status   int32                      // channel current status
-	sessions map[int64]*session.Session // session id map to session instance
-	listen   string
-	client   *nats.Conn
-	msgch    chan *nats.Msg
-	shut     chan struct{}
+	node      *nodes.Node
+	mu        sync.RWMutex
+	status    int32                      // channel current status
+	sessions  map[int64]*session.Session // session id map to session instance
+	listen    string
+	client    *nats.Conn
+	msgch     chan *nats.Msg
+	shut      chan struct{}
+	kickTopic string
+	pushTopic string
 }
 
 type ConnectorOpts func(g *Connector)
@@ -119,6 +121,9 @@ func (c *Connector) Init() {
 		logger.Fatal(err)
 		return
 	}
+	//设置topic
+	c.kickTopic = fmt.Sprintf("%s.%s", c.node.Nid, "kick")
+	c.pushTopic = fmt.Sprintf("%s.%s", c.node.Nid, "push")
 }
 
 func (c *Connector) AfterInit() {
@@ -168,10 +173,8 @@ func (c *Connector) watcher() {
 
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
-	kickTopic := fmt.Sprintf("%s.%s", c.node.Nid, "kick")
-	logger.Printf("the HandleMsg kick topic is:%s", kickTopic)
 	switch msg.Subject {
-	case kickTopic:
+	case c.kickTopic:
 		//收到踢人消息
 		uid := StringToInt64(string(msg.Data))
 		c.DelMember(uid)
@@ -179,10 +182,21 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 	}
 }
 
+func (c *Connector) PushMsg(connector string, uid int, data interface{}) error {
+
+	msg, err := c.client.Request(c.pushTopic, []byte(IntToString(uid)), 10*time.Millisecond)
+	if err != nil {
+		return err
+	}
+	resp := string(msg.Data)
+	if resp == "SUCCESS" {
+		return nil
+	}
+	return errors.New(resp)
+}
+
 func (c *Connector) KickUser(connector string, uid int) error {
-	topic := fmt.Sprintf("%s.%s", connector, "kick")
-	logger.Printf("the kick topic is:%s", topic)
-	msg, err := c.client.Request(topic, []byte(IntToString(uid)), 10*time.Millisecond)
+	msg, err := c.client.Request(c.kickTopic, []byte(IntToString(uid)), 10*time.Millisecond)
 	if err != nil {
 		return err
 	}
