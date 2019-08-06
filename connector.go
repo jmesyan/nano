@@ -191,7 +191,7 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 			msg.Respond(ResponseFail)
 			return
 		}
-		data := payload.Msg.(map[string]interface{})
+		data := payload.Msg
 		var sid int64
 		var addr string
 		if tmp, ok := data["id"]; ok {
@@ -223,12 +223,12 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 }
 
 type MsgLoad struct {
-	Uid   int         `json:"uid"`
-	Route string      `json:"route"`
-	Msg   interface{} `json:"msg"`
+	Uid   int                    `json:"uid"`
+	Route string                 `json:"route"`
+	Msg   map[string]interface{} `json:"msg"`
 }
 
-func (c *Connector) PushMsg(connector string, uid int, route string, data interface{}) error {
+func (c *Connector) PushMsg(connector string, uid int, route string, data map[string]interface{}) error {
 	topic := generateTopic(connector, "push")
 	payload := &MsgLoad{Uid: uid, Route: route, Msg: data}
 	load, err := serializer.Marshal(payload)
@@ -247,7 +247,7 @@ func (c *Connector) PushMsg(connector string, uid int, route string, data interf
 	return errors.New(resp)
 }
 
-func (c *Connector) KickUser(connector string, uid int, data interface{}) error {
+func (c *Connector) KickUser(connector string, uid int, data map[string]interface{}) error {
 	topic := generateTopic(connector, "kick")
 	payload := &MsgLoad{Uid: uid, Msg: data}
 	load, err := serializer.Marshal(payload)
