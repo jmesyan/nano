@@ -145,19 +145,6 @@ func (c *Connector) Member(uid int) (*session.Session, error) {
 
 	return nil, ErrMemberNotFound
 }
-func (c *Connector) DelMember(uid int) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	nuid := int64(uid)
-	for _, s := range c.sessions {
-		if s.UID() == nuid {
-			logger.Printf("del member, id=>%d, uid=>%d", s.ID(), s.UID())
-			s.Close()
-			delete(c.sessions, s.ID())
-			break
-		}
-	}
-}
 
 func (c *Connector) watcher() {
 	for {
@@ -185,9 +172,14 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 	uid := payload.Receiver.Uid
 	sid := payload.Receiver.Sid
 	nid := payload.Receiver.Nid
+	data := payload.Msg
 	switch msg.Subject {
 	case c.kickTopic:
 		//收到踢人消息
+		state := 0
+		if tmp, ok := data["state"]; ok {
+			state = int(tmp.(float64))
+		}
 		if nid == c.node.Nid {
 			sess, err := c.Member(uid)
 			if err != nil {
@@ -196,7 +188,11 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 				return
 			}
 			if sid == sess.ID() {
-				c.Leave(sess)
+				sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
+				sess.Clear()
+				if state != 1 {
+					sess.Close()
+				}
 				c.RemoveUser(uid)
 			}
 		}
@@ -248,9 +244,9 @@ func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route strin
 	return errors.New(resp)
 }
 
-func (c *Connector) KickUser(connector string, receiver *MsgReceiver) error {
+func (c *Connector) KickUser(connector string, receiver *MsgReceiver, state int) error {
 	topic := generateTopic(connector, "kick")
-	payload := &MsgLoad{Receiver: receiver}
+	payload := &MsgLoad{Receiver: receiver, Msg: map[string]interface{}{"state": state}}
 	load, err := serializer.Marshal(payload)
 	if err != nil {
 		return err
