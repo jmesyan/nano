@@ -25,9 +25,11 @@ import (
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
 	"github.com/jmesyan/nano/session"
+	"github.com/jmesyan/nano/users"
 	"github.com/nats-io/nats.go"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var (
@@ -128,6 +130,19 @@ func (c *Connector) Member(uid int64) (*session.Session, error) {
 
 	return nil, ErrMemberNotFound
 }
+func (c *Connector) DelMember(uid int64) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	for _, s := range c.sessions {
+		if s.UID() == uid {
+			logger.Printf("del member, id=>%d, uid=>%d", s.ID(), s.UID())
+			s.Close()
+			delete(c.sessions, s.ID())
+			break
+		}
+	}
+}
 
 func (c *Connector) watcher() {
 	for {
@@ -141,6 +156,7 @@ func (c *Connector) watcher() {
 		}
 	}
 }
+
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
 	kickTopic := fmt.Sprintf("%s.%s", c.node.Nid, "kick")
@@ -148,8 +164,55 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 	switch msg.Subject {
 	case kickTopic:
 		//收到踢人消息
+		uid := StringToInt64(string(msg.Data))
+		c.DelMember(uid)
 		msg.Respond([]byte("SUCCESS"))
 	}
+}
+
+func (c *Connector) KickUser(connector string, uid int) (bool, error) {
+	topic := fmt.Sprintf("%s.%s", connector, "kick")
+	logger.Printf("the kick topic is:%s", topic)
+	msg, err := c.client.Request(topic, []byte(IntToString(uid)), 10*time.Millisecond)
+	if err != nil {
+		logger.Println(err)
+		return false, err
+	}
+	resp := string(msg.Data)
+	if resp == "SUCCESS" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *Connector) StoreUser(uid int, data *users.User) (bool, error) {
+	user, err := serializer.Marshal(data)
+	if err != nil {
+		return false, err
+	}
+	key := fmt.Sprintf("user_%d", uid)
+	err = dcm.DCManager.SetValue(key, user)
+	if err != nil {
+		return false, err
+
+	}
+	return true, nil
+}
+
+func (c *Connector) GetUser(uid int) *users.User {
+	key := fmt.Sprintf("user_%d", uid)
+	kv, err := dcm.DCManager.GetValue(key)
+	if err != nil {
+		logger.Println(err)
+		return nil
+	}
+	user := &users.User{}
+	err = serializer.Unmarshal(kv.Value, user)
+	if err != nil {
+		logger.Println(err)
+		return nil
+	}
+	return user
 }
 
 func (c *Connector) BeforeShutdown() {

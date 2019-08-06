@@ -29,6 +29,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -130,4 +131,40 @@ func generateLocalAddr() string {
 		return ""
 	}
 	return fmt.Sprintf("%s:%s", macaddr, lp)
+}
+
+func StringToInt(valstr string) int {
+	val, err := strconv.Atoi(valstr)
+	if err != nil {
+		val = 0
+	}
+	return val
+}
+
+func StringToInt64(valstr string) int64 {
+	val := StringToInt(valstr)
+	return int64(val)
+}
+
+func Int64ToString(valint int64) string {
+	return strconv.FormatInt(valint, 10)
+}
+
+func Int64Toint(valint int64) int {
+	valstr := Int64ToString(valint)
+	return StringToInt(valstr)
+}
+
+func IntToInt64(valint int) int64 {
+	s := strconv.Itoa(valint)
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		println(err.Error())
+		return 0
+	}
+	return i
+}
+func IntToString(intval int) string {
+	return strconv.Itoa(intval)
+
 }
