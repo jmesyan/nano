@@ -1,7 +1,7 @@
 package users
 
 type User struct {
-	Sid            int    `json:"sid"`             // session_id
+	Sid            int64  `json:"sid"`             // session_id
 	Uid            int    `json:"uid"`             //用户ID
 	Channel        string `json:"channel"`         //通道
 	ConnectorAddr  string `json:"connector_addr"`  //客户端地址
