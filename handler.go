@@ -274,7 +274,7 @@ func (h *handlerService) processPacket(agent *agent, p *packet.Packet) error {
 	case packet.Heartbeat:
 		// expected
 	}
-
+	logger.Printf("processPacket: time is:%d, packet is:%#v \n", time.Now().Unix(), p)
 	agent.lastAt = time.Now().Unix()
 	return nil
 }
