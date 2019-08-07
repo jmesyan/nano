@@ -184,8 +184,15 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 			sess, err := c.Member(uid)
 			if err != nil {
 				logger.Println(err)
-				msg.Respond(ResponseFail)
-				return
+				user := c.GetUser(uid)
+				if user != nil && len(user.GameserverNid) == 0 {
+					c.RemoveUser(uid)
+					msg.Respond(ResponseSuccess)
+					return
+				} else {
+					msg.Respond(ResponseFail)
+					return
+				}
 			}
 			if sid == sess.ID() {
 				sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
