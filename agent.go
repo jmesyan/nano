@@ -231,6 +231,7 @@ func (a *agent) write() {
 				logger.Println(fmt.Sprintf("Session heartbeat timeout, LastTime=%d, Deadline=%d", a.lastAt, deadline))
 				return
 			}
+			logger.Println("heart beat send")
 			chWrite <- hbd
 
 		case data := <-chWrite:
