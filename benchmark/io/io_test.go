@@ -3,6 +3,7 @@
 package io
 
 import (
+	"github.com/jmesyan/nano/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -48,7 +49,7 @@ func (h *TestHandler) Ping(s *session.Session, data *testdata.Ping) error {
 
 func server() {
 	nano.Register(&TestHandler{})
-	nano.SetSerializer(protobuf.NewSerializer())
+	utils.SetSerializer(protobuf.NewSerializer())
 
 	nano.Listen(addr)
 }

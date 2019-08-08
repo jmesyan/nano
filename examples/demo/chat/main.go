@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/utils"
 	"log"
 	"net/http"
 	"time"
@@ -20,7 +21,7 @@ type (
 	// RoomManager represents a component that contains a bundle of room
 	RoomManager struct {
 		component.Base
-		timer *nano.Timer
+		timer *utils.Timer
 		rooms map[int]*Room
 	}
 
@@ -48,7 +49,7 @@ type (
 
 	stats struct {
 		component.Base
-		timer         *nano.Timer
+		timer         *utils.Timer
 		outboundBytes int
 		inboundBytes  int
 	}
@@ -65,7 +66,7 @@ func (stats *stats) inbound(s *session.Session, msg nano.Message) error {
 }
 
 func (stats *stats) AfterInit() {
-	stats.timer = nano.NewTimer(time.Minute, func() {
+	stats.timer = utils.NewTimer(time.Minute, func() {
 		println("OutboundBytes", stats.outboundBytes)
 		println("InboundBytes", stats.outboundBytes)
 	})
@@ -89,7 +90,7 @@ func (mgr *RoomManager) AfterInit() {
 			return
 		}
 	})
-	mgr.timer = nano.NewTimer(time.Minute, func() {
+	mgr.timer = utils.NewTimer(time.Minute, func() {
 		for roomId, _ := range mgr.rooms {
 			println(fmt.Sprintf("UserCount: RoomID=%d, Time=%s, Count=%d",
 				roomId, time.Now().String(), assist.Count()))
@@ -134,7 +135,7 @@ func (mgr *RoomManager) Message(s *session.Session, msg *UserMessage) error {
 
 func main() {
 	// override default serializer
-	nano.SetSerializer(json.NewSerializer())
+	utils.SetSerializer(json.NewSerializer())
 
 	// rewrite component and handler name
 	room := NewRoomManager()

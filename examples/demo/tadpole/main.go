@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/jmesyan/nano/utils"
 	"log"
 	"net/http"
 	"os"
@@ -38,7 +39,7 @@ func serve(ctx *cli.Context) error {
 	// register all service
 	nano.Register(logic.NewManager())
 	nano.Register(logic.NewWorld())
-	nano.SetSerializer(json.NewSerializer())
+	utils.SetSerializer(json.NewSerializer())
 
 	//nano.EnableDebug()
 	log.SetFlags(log.LstdFlags | log.Llongfile)

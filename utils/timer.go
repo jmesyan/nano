@@ -1,4 +1,4 @@
-package nano
+package utils
 
 import (
 	"fmt"
@@ -25,12 +25,12 @@ var (
 		createdTimer   []*Timer
 	}{}
 
-	// timerPrecision indicates the precision of timer, default is time.Second
-	timerPrecision = time.Second
+	// TimerPrecision indicates the precision of timer, default is time.Second
+	TimerPrecision = time.Second
 
-	// globalTicker represents global ticker that all cron job will be executed
-	// in globalTicker.
-	globalTicker *time.Ticker
+	// GlobalTicker represents global ticker that all cron job will be executed
+	// in GlobalTicker.
+	GlobalTicker *time.Ticker
 )
 
 type (
@@ -80,14 +80,14 @@ func safecall(id int64, fn TimerFunc) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(fmt.Sprintf("Call timer function error, TimerID=%d, Error=%v", id, err))
-			println(stack())
+			println(Stack())
 		}
 	}()
 
 	fn()
 }
 
-func cron() {
+func Cron() {
 	if len(timerManager.createdTimer) > 0 {
 		timerManager.muCreatedTimer.Lock()
 		for _, t := range timerManager.createdTimer {
@@ -211,5 +211,5 @@ func SetTimerPrecision(precision time.Duration) {
 	if precision < time.Millisecond {
 		panic("time precision can not less than a Millisecond")
 	}
-	timerPrecision = precision
+	TimerPrecision = precision
 }

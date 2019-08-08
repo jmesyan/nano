@@ -23,6 +23,7 @@ package nano
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/jmesyan/nano/utils"
 	"net"
 	"reflect"
 	"time"
@@ -103,7 +104,7 @@ func pcall(method reflect.Method, args []reflect.Value) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/dispatch: %v", err))
-			println(stack())
+			println(utils.Stack())
 		}
 	}()
 
@@ -119,7 +120,7 @@ func pinvoke(fn func()) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/invoke: %v", err))
-			println(stack())
+			println(utils.Stack())
 		}
 	}()
 
@@ -130,7 +131,7 @@ func onSessionClosed(s *session.Session) {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Println(fmt.Sprintf("github.com/jmesyan/nano/onSessionClosed: %v", err))
-			println(stack())
+			println(utils.Stack())
 		}
 	}()
 
@@ -143,11 +144,11 @@ func (h *handlerService) dispatch() {
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Println(fmt.Sprintf("Dispatcher exit unexpected: %v", err))
-			println(stack())
+			println(utils.Stack())
 		}
 		close(h.chLocalProcess)
 		close(h.chCloseSession)
-		globalTicker.Stop()
+		utils.GlobalTicker.Stop()
 		logger.Println("Main logic loop exit")
 	}()
 
@@ -164,8 +165,8 @@ func (h *handlerService) dispatch() {
 		case fn := <-h.chFunction:
 			pinvoke(fn)
 
-		case <-globalTicker.C: // execute cron task
-			cron()
+		case <-utils.GlobalTicker.C: // execute cron task
+			utils.Cron()
 
 		case <-env.die: // application quit signal
 			logger.Println("Got exit instruction, break logic loop")
@@ -307,7 +308,7 @@ func (h *handlerService) processMessage(agent *agent, msg *message.Message) {
 		data = payload
 	} else {
 		data = reflect.New(handler.Type.Elem()).Interface()
-		err := serializer.Unmarshal(payload, data)
+		err := utils.Serializer.Unmarshal(payload, data)
 		if err != nil {
 			logger.Println("deserialize error", err.Error())
 			return

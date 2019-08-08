@@ -162,7 +162,7 @@ func (c *Connector) watcher() {
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
 	payload := &MsgLoad{}
-	err := serializer.Unmarshal(msg.Data, payload)
+	err := utils.Serializer.Unmarshal(msg.Data, payload)
 	if err != nil {
 		logger.Println(err)
 		msg.Respond(ResponseFail)
@@ -235,7 +235,7 @@ type MsgLoad struct {
 func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
 	topic := utils.GenerateTopic(connector, "push")
 	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
-	load, err := serializer.Marshal(payload)
+	load, err := utils.Serializer.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -253,7 +253,7 @@ func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route strin
 func (c *Connector) KickUser(connector string, receiver *MsgReceiver, state int) error {
 	topic := utils.GenerateTopic(connector, "kick")
 	payload := &MsgLoad{Receiver: receiver, Msg: map[string]interface{}{"state": state}}
-	load, err := serializer.Marshal(payload)
+	load, err := utils.Serializer.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,7 @@ func (c *Connector) KickUser(connector string, receiver *MsgReceiver, state int)
 }
 
 func (c *Connector) StoreUser(uid int, data *users.User) error {
-	user, err := serializer.Marshal(data)
+	user, err := utils.Serializer.Marshal(data)
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (c *Connector) GetUser(uid int) *users.User {
 		return nil
 	}
 	user := &users.User{}
-	err = serializer.Unmarshal(kv.Value, user)
+	err = utils.Serializer.Unmarshal(kv.Value, user)
 	if err != nil {
 		logger.Println(err)
 		return nil
@@ -338,7 +338,7 @@ func (c *Connector) Multicast(route string, v interface{}, filter SessionFilter)
 		return ErrClosedConnector
 	}
 
-	data, err := serializeOrRaw(v)
+	data, err := utils.SerializeOrRaw(v)
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func (c *Connector) Broadcast(route string, v interface{}) error {
 		return ErrClosedConnector
 	}
 
-	data, err := serializeOrRaw(v)
+	data, err := utils.SerializeOrRaw(v)
 	if err != nil {
 		return err
 	}

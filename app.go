@@ -61,7 +61,7 @@ func listen(addr string, isWs bool, opts ...Option) {
 
 	// create global ticker instance, timer precision could be customized
 	// by SetTimerPrecision
-	globalTicker = time.NewTicker(timerPrecision)
+	utils.GlobalTicker = time.NewTicker(utils.TimerPrecision)
 
 	// startup logic dispatcher
 	go handler.dispatch()

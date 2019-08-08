@@ -1,6 +1,12 @@
-package nano
+package utils
 
-import "testing"
+import (
+	"encoding/binary"
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+)
 
 func null(key, value int) int {
 	key += value
@@ -38,4 +44,23 @@ func BenchmarkEmptyMap2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		test2(m)
 	}
+}
+
+func TestUint32ToByte(t *testing.T) {
+	b := make([]byte, 4)
+	var v uint32
+	v = 1688272828
+	fmt.Println(b)
+	binary.LittleEndian.PutUint32(b, v)
+	fmt.Println(b)
+}
+
+func TestAfterFunc(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	time.AfterFunc(2*time.Second, func() {
+		fmt.Println("welcome")
+		wg.Done()
+	})
+	wg.Wait()
 }

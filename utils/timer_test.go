@@ -1,4 +1,4 @@
-package nano
+package utils
 
 import (
 	"sync/atomic"
@@ -26,8 +26,8 @@ func TestNewTimer(t *testing.T) {
 	}
 
 	<-time.After(5 * time.Millisecond)
-	cron()
-	cron()
+	Cron()
+	Cron()
 	if counter != tc*2 {
 		t.Fatalf("expect: %d, got: %d", tc*2, counter)
 	}
@@ -65,7 +65,7 @@ func TestNewAfterTimer(t *testing.T) {
 	}
 
 	<-time.After(5 * time.Millisecond)
-	cron()
+	Cron()
 	if counter != tc {
 		t.Fatalf("expect: %d, got: %d", tc, counter)
 	}

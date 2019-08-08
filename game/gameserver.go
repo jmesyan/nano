@@ -8,6 +8,7 @@ import (
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"net"
+	"time"
 )
 
 const (
@@ -29,6 +30,7 @@ type GameServer struct {
 	rtype     int32
 	ridx      int32
 	startTime int
+	tablesort map[int32]*GameTable
 }
 
 type GameServerOpts func(g *GameServer)
@@ -41,8 +43,9 @@ func WithGameServerNatsaddrs(address string) GameServerOpts {
 
 func NewGameServer(conn net.Conn, opts ...GameServerOpts) *GameServer {
 	g := &GameServer{
-		conn:   conn,
-		status: gameserverStatusStarting,
+		conn:      conn,
+		tablesort: make(map[int32]*GameTable),
+		status:    gameserverStatusStarting,
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -57,7 +60,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 	data := p.Data
 	cmd := p.Cmd
 	switch cmd {
-	case 9472 | ACK:
+	case CMD.OGID_CONTROL_REGIS | CMD.ACK:
 		//握手
 		register := &RegisterServer{}
 		err := proto.Unmarshal(data, register)
@@ -67,7 +70,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 			fmt.Printf("server start: gid:%d, the rtype is:%d, the ridx is:%d\n", register.GetGid(), register.GetRidx(), register.GetRtype())
 			g.Init(register.GetGid(), register.GetRidx(), register.GetRtype())
 		}
-	case 9476 | ACK:
+	case CMD.OGID_CONTROL_TABLES | CMD.ACK:
 		//注册桌子
 		desk := &ControlRoomUsers{}
 		err := proto.Unmarshal(data, desk)
@@ -78,24 +81,63 @@ func (g *GameServer) processPacket(p *Packet) error {
 			gid := desk.GetGid()
 			tables := desk.Tableinfo
 			if gid < 10 {
-
+				time.AfterFunc(2*time.Second, func() {
+					g.initMatchServers(tables)
+				})
 			} else if gid >= 10 && gid < 20 {
-
+				time.AfterFunc(2*time.Second, func() {
+					g.initGoldServers(tables)
+				})
 			} else {
 				g.initTables(tables)
 			}
 		}
-	case 9485 | ACK:
+	case CMD.OGID_CONTROL_HEART_BEAT | CMD.ACK:
 		//心跳
 		heart := &ControlHeartBeat{}
 		err := proto.Unmarshal(data, heart)
 		if err != nil {
 			return err
 		} else {
-			fmt.Printf("the heart info is :%d\n", *heart.Nowstamp)
+			fmt.Printf("the heart info is :%d\n", heart.GetNowstamp())
+			g.sendHeartBeat(heart.GetNowstamp())
 		}
 	}
 	return nil
+}
+
+func (g *GameServer) sendHeartBeat(t uint32) {
+	if t > 0 {
+		g.sendString(fmt.Sprintf("02BEAT%d", t))
+	} else {
+		g.sendString("02BEAT")
+	}
+}
+
+func (g *GameServer) sendString(str string) bool {
+	if str == "B" {
+		g.dispose()
+		return false
+	}
+	if g.conn != nil {
+		_, err := g.conn.Write([]byte(str))
+		if err != nil {
+			fmt.Println(err)
+		}
+		return true
+	}
+	return false
+}
+
+func (g *GameServer) dispose() {
+
+}
+
+func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
+
+}
+func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
+
 }
 
 func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
@@ -104,8 +146,23 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 	}
 }
 
-func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) {
+func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
+	gametable := g.getTable(table.GetTid())
+	if gametable == nil {
+		gametable = NewGameTable()
+	}
+	gametable.Init(g.gsid, table)
+	gametable.gameserver = g
+	g.tablesort[gametable.tableid] = gametable
+	alltablesort[gametable.tableid] = gametable
+	return gametable
+}
 
+func (g *GameServer) getTable(tableid int32) *GameTable {
+	if table, ok := g.tablesort[tableid]; ok {
+		return table
+	}
+	return nil
 }
 
 func (g *GameServer) handleConn() {
@@ -131,7 +188,7 @@ func (g *GameServer) handleConn() {
 		// process all packet
 		for i := range packets {
 			if err := g.processPacket(packets[i]); err != nil {
-				fmt.Println(err.Error())
+				fmt.Println(err)
 				return
 			}
 		}
@@ -149,13 +206,18 @@ func (g *GameServer) Status() int32 {
 func (g *GameServer) Init(gid, rtype, ridx int32) {
 	g.gid, g.rtype, g.ridx = gid, rtype, ridx
 	g.gsid = fmt.Sprintf("%d_%d_%d", gid, rtype, ridx)
-	g.startTime = utils.Time()
 	if oldserver, ok := serversort[g.gsid]; ok {
+		g.tablesort = oldserver.tablesort
+		oldserver.tablesort = nil
 		g.startTime = oldserver.startTime
+		g.node = oldserver.node
+		g.client = oldserver.client
 	} else {
 		serversort[g.gsid] = g
 		g.InitNats()
 	}
+	g.startTime = utils.Time()
+	g.status = gameserverStatusWorking
 }
 
 func (g *GameServer) InitNats() {

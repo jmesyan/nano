@@ -23,6 +23,7 @@ package nano
 import (
 	"errors"
 	"fmt"
+	"github.com/jmesyan/nano/utils"
 	"net"
 	"reflect"
 	"sync/atomic"
@@ -245,7 +246,7 @@ func (a *agent) write() {
 			}
 
 		case data := <-a.chSend:
-			payload, err := serializeOrRaw(data.payload)
+			payload, err := utils.SerializeOrRaw(data.payload)
 			if err != nil {
 				switch data.typ {
 				case message.Push:

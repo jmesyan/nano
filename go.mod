@@ -52,9 +52,10 @@ replace (
 require (
 	github.com/go-redis/redis v0.0.0-20190803144825-742f3ccb21cd
 	github.com/golang/protobuf v1.3.2
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.0
 	github.com/hashicorp/consul/api v1.1.0
 	github.com/nats-io/nats.go v1.8.1
 	github.com/sirupsen/logrus v1.4.2
+	github.com/urfave/cli v1.21.0 // indirect
 )

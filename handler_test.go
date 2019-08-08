@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"github.com/jmesyan/nano/utils"
 	"reflect"
 	"testing"
 
@@ -108,11 +109,11 @@ func (t *TestComp) RawData(s *session.Session, _ []byte) error {
 }
 
 func TestHandlerCallJSON(t *testing.T) {
-	SetSerializer(json.NewSerializer())
+	utils.SetSerializer(json.NewSerializer())
 	handler.register(&TestComp{}, nil)
 
 	m := JSONMessage{Code: 1, Data: "hello world"}
-	data, err := serializeOrRaw(m)
+	data, err := utils.SerializeOrRaw(m)
 	if err != nil {
 		t.Fail()
 	}
@@ -127,11 +128,11 @@ func TestHandlerCallJSON(t *testing.T) {
 }
 
 func TestHandlerCallProtobuf(t *testing.T) {
-	SetSerializer(protobuf.NewSerializer())
+	utils.SetSerializer(protobuf.NewSerializer())
 	handler.register(&TestComp{}, nil)
 
 	m := &ProtoMessage{Data: proto.String("hello world")}
-	data, err := serializeOrRaw(m)
+	data, err := utils.SerializeOrRaw(m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -146,11 +147,11 @@ func TestHandlerCallProtobuf(t *testing.T) {
 }
 
 func BenchmarkHandlerCallJSON(b *testing.B) {
-	SetSerializer(json.NewSerializer())
+	utils.SetSerializer(json.NewSerializer())
 	handler.register(&TestComp{}, nil)
 
 	m := JSONMessage{Code: 1, Data: "hello world"}
-	data, err := serializeOrRaw(m)
+	data, err := utils.SerializeOrRaw(m)
 	if err != nil {
 		b.Fail()
 	}
@@ -171,11 +172,11 @@ func BenchmarkHandlerCallJSON(b *testing.B) {
 }
 
 func BenchmarkHandlerCallProtobuf(b *testing.B) {
-	SetSerializer(protobuf.NewSerializer())
+	utils.SetSerializer(protobuf.NewSerializer())
 	handler.register(&TestComp{}, nil)
 
 	m := &ProtoMessage{Data: proto.String("hello world")}
-	data, err := serializeOrRaw(m)
+	data, err := utils.SerializeOrRaw(m)
 	if err != nil {
 		b.Fail()
 	}
@@ -195,11 +196,11 @@ func BenchmarkHandlerCallProtobuf(b *testing.B) {
 }
 
 func BenchmarkHandlerCallRawData(b *testing.B) {
-	SetSerializer(protobuf.NewSerializer())
+	utils.SetSerializer(protobuf.NewSerializer())
 	handler.register(&TestComp{}, nil)
 
 	m := &ProtoMessage{Data: proto.String("hello world")}
-	data, err := serializeOrRaw(m)
+	data, err := utils.SerializeOrRaw(m)
 	if err != nil {
 		b.Fail()
 	}
