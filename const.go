@@ -27,3 +27,8 @@ const (
 	statusWorking
 	statusClosed
 )
+
+var (
+	ResponseSuccess = []byte("SUCCESS")
+	ResponseFail    = []byte("FAIL")
+)

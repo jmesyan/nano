@@ -27,6 +27,7 @@ import (
 	"github.com/jmesyan/nano/nodes"
 	"github.com/jmesyan/nano/session"
 	"github.com/jmesyan/nano/users"
+	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"sync"
 	"sync/atomic"
@@ -35,8 +36,6 @@ import (
 
 var (
 	ConnectorHandler *Connector
-	ResponseSuccess  = []byte("SUCCESS")
-	ResponseFail     = []byte("FAIL")
 )
 
 const (
@@ -55,7 +54,7 @@ type Connector struct {
 	mu        sync.RWMutex
 	status    int32                      // channel current status
 	sessions  map[int64]*session.Session // session id map to session instance
-	listen    string
+	natsaddrs string
 	client    *nats.Conn
 	msgch     chan *nats.Msg
 	shut      chan struct{}
@@ -65,20 +64,20 @@ type Connector struct {
 
 type ConnectorOpts func(g *Connector)
 
-func WithListen(address string) ConnectorOpts {
+func WithConnectorNatsaddrs(address string) ConnectorOpts {
 	return func(c *Connector) {
-		c.listen = address
+		c.natsaddrs = address
 	}
 }
 
 // StartConnector start a new connector instance
 func NewConnector(opts ...ConnectorOpts) *Connector {
 	c := &Connector{
-		status:   connectorStatusWorking,
-		sessions: make(map[int64]*session.Session),
-		listen:   nats.DefaultURL,
-		msgch:    make(chan *nats.Msg, 64),
-		shut:     make(chan struct{}, 1),
+		status:    connectorStatusWorking,
+		sessions:  make(map[int64]*session.Session),
+		natsaddrs: nats.DefaultURL,
+		msgch:     make(chan *nats.Msg, 64),
+		shut:      make(chan struct{}, 1),
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -93,17 +92,17 @@ func (c *Connector) NID() string {
 	return c.node.Nid
 }
 
-func (c *Connector) Status() nodes.NodeStatus {
-	return c.node.Status
+func (c *Connector) Status() int32 {
+	return c.status
 }
 
 func (c *Connector) Init() {
 	var err error
-	nid := generateNodeId(nodes.NodeConnector, "")
-	n := nodes.NewNode("connector", nid, nodes.NodeConnector, nodes.WithNodeAddress(generateLocalAddr()))
+	nid := utils.GenerateNodeId(nodes.NodeConnector, "")
+	n := nodes.NewNode("connector", nid, nodes.NodeConnector, nodes.WithNodeAddress(utils.GenerateLocalAddr()))
 	dcm.RegisterNode(nid, n)
 	c.node = n
-	c.client, err = nats.Connect(c.listen)
+	c.client, err = nats.Connect(c.natsaddrs)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -124,8 +123,8 @@ func (c *Connector) Init() {
 		return
 	}
 	//设置topic
-	c.kickTopic = generateTopic(c.node.Nid, "kick")
-	c.pushTopic = generateTopic(c.node.Nid, "push")
+	c.kickTopic = utils.GenerateTopic(c.node.Nid, "kick")
+	c.pushTopic = utils.GenerateTopic(c.node.Nid, "push")
 }
 
 func (c *Connector) AfterInit() {
@@ -234,7 +233,7 @@ type MsgLoad struct {
 }
 
 func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
-	topic := generateTopic(connector, "push")
+	topic := utils.GenerateTopic(connector, "push")
 	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
 	load, err := serializer.Marshal(payload)
 	if err != nil {
@@ -252,7 +251,7 @@ func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route strin
 }
 
 func (c *Connector) KickUser(connector string, receiver *MsgReceiver, state int) error {
-	topic := generateTopic(connector, "kick")
+	topic := utils.GenerateTopic(connector, "kick")
 	payload := &MsgLoad{Receiver: receiver, Msg: map[string]interface{}{"state": state}}
 	load, err := serializer.Marshal(payload)
 	if err != nil {

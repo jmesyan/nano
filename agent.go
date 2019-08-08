@@ -187,6 +187,9 @@ func (a *agent) Close() error {
 		handler.chCloseSession <- a.session
 	}
 
+	if uid := a.session.UID(); uid > 0 {
+		ConnectorHandler.RemoveUser(int(uid))
+	}
 	return a.conn.Close()
 }
 

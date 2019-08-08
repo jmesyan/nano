@@ -22,6 +22,7 @@ package nano
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/utils"
 	"net"
 	"net/http"
 	"os"
@@ -35,8 +36,7 @@ import (
 )
 
 var (
-	running    int32
-	listenAddr string
+	running int32
 )
 
 func listen(addr string, isWs bool, opts ...Option) {
@@ -47,7 +47,7 @@ func listen(addr string, isWs bool, opts ...Option) {
 	}
 
 	//record listen addr
-	listenAddr = addr
+	utils.ListenAddr = addr
 	//opts
 	for _, opt := range opts {
 		opt(handler.options)
