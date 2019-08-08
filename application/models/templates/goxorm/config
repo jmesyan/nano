@@ -1,0 +1,5 @@
+lang=go
+genJson=1
+genForm=1
+genCsv=1
+prefix=cos_
