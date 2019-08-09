@@ -22,6 +22,7 @@ package nano
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/serialize"
 	"github.com/jmesyan/nano/utils"
 	"net"
 	"net/http"
@@ -133,4 +134,10 @@ func listenAndServeWS(addr string) {
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		logger.Fatal(err.Error())
 	}
+}
+
+// SetSerializer customize application serializer, which automatically Marshal
+// and UnMarshal handler payload
+func SetSerializer(seri serialize.Serializer) {
+	utils.Serializer = seri
 }
