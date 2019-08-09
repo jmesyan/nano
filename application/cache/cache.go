@@ -44,19 +44,17 @@ func newCacheManager() *cacheManager {
 	cm := &cacheManager{
 		Prefix: "stargames",
 	}
-	switch cm.Config {
-	case "redis":
-		addr := strings.Join([]string{"127.0.0.1", "6379"}, ":")
-		redisOptions := &redis.Options{
-			Addr: addr,
-			DB:   0,
-		}
-		cm.Client = redis.NewClient(redisOptions)
 
-		_, err := cm.Client.Ping().Result()
-		if err != nil {
-			log.Fatal("redis", err.Error())
-		}
+	addr := strings.Join([]string{"127.0.0.1", "6379"}, ":")
+	redisOptions := &redis.Options{
+		Addr: addr,
+		DB:   0,
+	}
+	cm.Client = redis.NewClient(redisOptions)
+
+	_, err := cm.Client.Ping().Result()
+	if err != nil {
+		log.Fatal("redis", err.Error())
 	}
 	if cm.Client == nil {
 		log.Fatal("can't find the cache client")
