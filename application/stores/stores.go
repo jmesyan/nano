@@ -113,6 +113,7 @@ func NewStoreDatas() *StoreDatas {
 	sd := &StoreDatas{}
 	sd.initSys()
 	sd.initGds()
+	sd.initP2p()
 	return sd
 }
 
