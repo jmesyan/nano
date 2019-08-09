@@ -54,6 +54,9 @@ func NewGameServer(conn net.Conn, opts ...GameServerOpts) *GameServer {
 		conn:      conn,
 		tablesort: make(map[int32]*GameTable),
 		status:    gameserverStatusStarting,
+		natsaddrs: nats.DefaultURL,
+		msgch:     make(chan *nats.Msg, 64),
+		shut:      make(chan struct{}, 1),
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {

@@ -68,7 +68,7 @@ func (tm *RandomAssignGameTable) registerTables(gsid string, tables []*ControlRo
 			}
 			tids = append(tids, tid)
 		}
-		logger.Printf("registerTables %s 注册:%d,使用:%d,总使用桌子:%d,总可用桌子:%d,总可用房号:%d\n", gsid, len(tables), use, len(p2p.Mj.Nouse[gid]), len(p2p.Mj.AllCode))
+		logger.Printf("registerTables %s 注册:%d,使用:%d,总使用桌子:%d,总可用桌子:%d,总可用房号:%d\n", gsid, len(tables), use, len(p2p.Mj.Use), len(p2p.Mj.Nouse[gid]), len(p2p.Mj.AllCode))
 	}
 
 }

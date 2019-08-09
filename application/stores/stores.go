@@ -71,6 +71,7 @@ type StoreDatas struct {
 }
 
 func (sd *StoreDatas) initSys() {
+	sd.Sys = &StoreSys{}
 	sys := sd.Sys
 	sys.SYS_MAINTENANCE = true
 	sys.MAINTEN_SERVERS = make(map[string]bool)
@@ -88,6 +89,7 @@ func (sd *StoreDatas) initSys() {
 }
 
 func (sd *StoreDatas) initGds() {
+	sd.Gds = &StoreGds{}
 	sd.Gds.Configs = cache.CacheManager.GetGameGoldsType()
 }
 

@@ -135,7 +135,7 @@ func (mgr *RoomManager) Message(s *session.Session, msg *UserMessage) error {
 
 func main() {
 	// override default serializer
-	utils.SetSerializer(json.NewSerializer())
+	nano.SetSerializer(json.NewSerializer())
 
 	// rewrite component and handler name
 	room := NewRoomManager()
