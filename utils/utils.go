@@ -31,6 +31,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -191,4 +192,38 @@ func Md5(sign string) string {
 	io.WriteString(h, sign)
 	sum := fmt.Sprintf("%x", h.Sum(nil))
 	return sum
+}
+
+func InArray(needle interface{}, haystack interface{}) bool {
+	val := reflect.ValueOf(haystack)
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < val.Len(); i++ {
+			if reflect.DeepEqual(needle, val.Index(i).Interface()) {
+				return true
+			}
+		}
+	case reflect.Map:
+		for _, k := range val.MapKeys() {
+			if reflect.DeepEqual(needle, val.MapIndex(k).Interface()) {
+				return true
+			}
+		}
+	default:
+		panic("haystack: haystack type muset be slice, array or map")
+	}
+
+	return false
+}
+
+type CompareFunc func(interface{}, interface{}) bool
+
+func IndexOf(a []interface{}, e interface{}, cmp CompareFunc) int {
+	n := len(a)
+	for i := 0; i < n; i++ {
+		if cmp(e, a[i]) {
+			return i
+		}
+	}
+	return -1
 }

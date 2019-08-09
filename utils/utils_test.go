@@ -64,3 +64,8 @@ func TestAfterFunc(t *testing.T) {
 	})
 	wg.Wait()
 }
+
+func TestFillZero(t *testing.T) {
+	s := "00000000001234"
+	fmt.Println(s[len(s)-10:])
+}

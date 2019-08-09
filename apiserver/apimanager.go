@@ -3,9 +3,7 @@ package apiserver
 import (
 	"fmt"
 	"github.com/jmesyan/nano"
-	"github.com/jmesyan/nano/application/cache"
 	"github.com/jmesyan/nano/application/stores"
-	"github.com/jmesyan/nano/utils"
 	"log"
 	"net"
 	"os"
@@ -45,28 +43,6 @@ func NewApiManager(opts ...ApiManagerOpts) *ApiManager {
 }
 
 func (am *ApiManager) Init() {
-	sys.SYS_MAINTENANCE = true
-	//维护开关
-	maintence := cache.CacheManager.GetMaintence()
-	if maintence != nil {
-		if maintence.Type == 1 {
-			sys.SYS_MAINTENANCE = true
-		}
-		time := utils.Time()
-		if maintence.Type == 1 && time < maintence.Time {
-			sys.MAINTENANCE_TIME2 = maintence.Time
-		}
-	}
-	//加载金币房间配置
-	loadGoldsTypeConfig()
-
-}
-
-func loadGoldsTypeConfig() {
-	gds.Configs = cache.CacheManager.GetGameGoldsType()
-}
-
-func (am *ApiManager) AfterInit() {
 	listen, err := net.Listen("tcp", am.listenaddrs)
 	if err != nil {
 		fmt.Println(err)
@@ -82,6 +58,10 @@ func (am *ApiManager) AfterInit() {
 		// start a new goroutine to handle the new connection
 		NewApiServer(conn)
 	}
+}
+
+func (am *ApiManager) AfterInit() {
+
 }
 func (am *ApiManager) BeforeShutdown() {
 

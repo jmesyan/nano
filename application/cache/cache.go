@@ -160,6 +160,16 @@ func (cm *cacheManager) GetMaintence() *MaintenanceInfo {
 	return info
 }
 
+func (cm *cacheManager) RemoveMaintence() bool {
+	key := cm.CacheKey("maintenance")
+	return cm.Del(key)
+}
+
+func (cm *cacheManager) RemoveGameManintence(gsid string) bool {
+	key := cm.CacheKey("maintenance", gsid)
+	return cm.Del(key)
+}
+
 func (cm *cacheManager) GetUser(uid int) *structure.YlyUser {
 	key := cm.CacheKey("GetUser", uid)
 	val := cm.Get(key)

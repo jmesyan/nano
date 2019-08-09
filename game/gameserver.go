@@ -1,13 +1,16 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/jmesyan/nano/application/stores"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -15,6 +18,11 @@ const (
 	gameserverStatusWorking  = 0
 	gameserverStatusClosed   = 1
 	gameserverStatusStarting = 2
+)
+
+var (
+	gds = stores.StoresHandler.Gds
+	sys = stores.StoresHandler.Sys
 )
 
 type GameServer struct {
@@ -26,9 +34,9 @@ type GameServer struct {
 	msgch     chan *nats.Msg
 	shut      chan struct{}
 	gsid      string
-	gid       int32
-	rtype     int32
-	ridx      int32
+	gid       int
+	rtype     int
+	ridx      int
 	startTime int
 	tablesort map[int32]*GameTable
 }
@@ -89,7 +97,9 @@ func (g *GameServer) processPacket(p *Packet) error {
 					g.initGoldServers(tables)
 				})
 			} else {
+				logger.Println("initTables:", g.gsid, tables)
 				g.initTables(tables)
+				TableManager.registerTables(g.gsid, tables)
 			}
 		}
 	case CMD.OGID_CONTROL_HEART_BEAT | CMD.ACK:
@@ -134,15 +144,68 @@ func (g *GameServer) dispose() {
 }
 
 func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
-
+	//暂无比赛
 }
 func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
+	grid := fmt.Sprintf("%d_%d", g.gid, g.rtype)
+	mgsids := []int{}
+	for k, v := range gds.Configs {
+		censerver := v.Censerver
+		if len(censerver) > 0 && censerver == grid && !utils.InArray(k, mgsids) {
+			mgsids = append(mgsids, k)
+		}
+	}
 
+	logger.Println("initGoldServers", g.gsid, mgsids)
+	for _, mgid := range mgsids {
+		for gsid, server := range serversort {
+			gsids := strings.Split(gsid, "_")
+			gid, rtype, ridx := utils.StringToInt(gsids[0]), utils.StringToInt(gsids[1]), utils.StringToInt(gsids[2])
+			if mgid == gid && !sys.MAINTEN_SERVERS[fmt.Sprintf("SYS_MAINTENANCE_%s", gsid)] && ridx%2 == g.ridx%2 {
+				mtids := []int32{}
+				for mtid, _ := range server.tablesort {
+					mtids = append(mtids, mtid)
+				}
+				data, err := json.Marshal(mtids)
+				if err != nil {
+					logger.Println(err)
+					continue
+				}
+				msg := string(data)
+				server.N2S(gid, rtype, ridx, "01", msg)
+			}
+		}
+	}
 }
 
 func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 	for _, table := range tables {
 		g.addTable(table)
+	}
+	//金币场
+	if g.gid >= 1000 && g.gid < 5000 {
+		if gd, ok := gds.Configs[g.gid]; ok {
+			mtids := []int32{}
+			for mtid, _ := range g.tablesort {
+				mtids = append(mtids, mtid)
+			}
+			data, err := json.Marshal(mtids)
+			if err != nil {
+				logger.Println(err)
+				return
+			}
+			msg := string(data)
+			if len(gd.Censerver) > 0 {
+				for gsid, server := range serversort {
+					gsids := strings.Split(gsid, "_")
+					gid, rtype, ridx := utils.StringToInt(gsids[0]), utils.StringToInt(gsids[1]), utils.StringToInt(gsids[2])
+					grid := fmt.Sprintf("%d_%d", gid, rtype)
+					if grid == gd.Censerver && !sys.MAINTEN_SERVERS[fmt.Sprintf("SYS_MAINTENANCE_%s", gsid)] && ridx%2 == g.ridx%2 {
+						server.N2S(g.gid, g.rtype, g.ridx, "01", msg)
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -163,6 +226,22 @@ func (g *GameServer) getTable(tableid int32) *GameTable {
 		return table
 	}
 	return nil
+}
+
+func (g *GameServer) N2S(gid, rtype, ridx int, cmd, msg string) string {
+	if len(cmd) == 0 {
+		cmd = "00"
+	}
+	mgid, mrtype, mridx := g.formatGsid(gid), g.formatGsid(rtype), g.formatGsid(ridx)
+	data := fmt.Sprintf("04AAAA%s%s%s%s%s", mgid, cmd, mrtype, mridx, msg)
+	g.sendString(data)
+	return data
+}
+
+func (g *GameServer) formatGsid(id int) string {
+	format := "0000000000%d"
+	ids := fmt.Sprintf(format, id)
+	return ids[len(ids)-10:]
 }
 
 func (g *GameServer) handleConn() {
@@ -204,7 +283,7 @@ func (g *GameServer) Status() int32 {
 }
 
 func (g *GameServer) Init(gid, rtype, ridx int32) {
-	g.gid, g.rtype, g.ridx = gid, rtype, ridx
+	g.gid, g.rtype, g.ridx = int(gid), int(rtype), int(ridx)
 	g.gsid = fmt.Sprintf("%d_%d_%d", gid, rtype, ridx)
 	if oldserver, ok := serversort[g.gsid]; ok {
 		g.tablesort = oldserver.tablesort
