@@ -140,7 +140,8 @@ func (g *GameServer) sendString(str string) bool {
 }
 
 func (g *GameServer) dispose() {
-
+	logger.Printf("============服务器%s析构开始=====================\n", g.node.Nid)
+	dcm.DeRegisterNode(g.node.Nid)
 }
 
 func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
@@ -245,7 +246,7 @@ func (g *GameServer) formatGsid(id int) string {
 }
 
 func (g *GameServer) handleConn() {
-	defer g.conn.Close()
+	defer g.dispose()
 	buf := make([]byte, 2048)
 	decoder := NewDecoder()
 	for {
