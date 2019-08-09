@@ -33,11 +33,10 @@ func NewGameManager(opts ...GameManagerOpts) *GameManager {
 			opt(g)
 		}
 	}
-	GameManagerHander = g
 	return g
 }
 func (g *GameManager) Init() {
-	listen, err := net.Listen("tcp", "0.0.0.0:20572")
+	listen, err := net.Listen("tcp", g.listenaddrs)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -61,4 +60,9 @@ func (g *GameManager) BeforeShutdown() {
 }
 func (g *GameManager) Shutdown() {
 
+}
+
+func init() {
+	GameManagerHander = NewGameManager()
+	Register(GameManagerHander)
 }

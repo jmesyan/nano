@@ -4,6 +4,7 @@ type YlyPost struct {
 	Pid      int    `xorm:"not null pk autoincr INT(11)" json:"pid" form:"pid" csv:"pid"`
 	Fromid   int    `xorm:"not null default 0 comment('寄件人') index INT(11)" json:"fromid" form:"fromid" csv:"fromid"`
 	Toid     int    `xorm:"not null default 0 comment('收件人') index INT(11)" json:"toid" form:"toid" csv:"toid"`
+	Fname    string `xorm:"not null default '' comment('寄件人姓名') VARCHAR(30)" json:"fname" form:"fname" csv:"fname"`
 	Sendtime int    `xorm:"not null default 0 comment('寄件时间') index INT(11)" json:"sendtime" form:"sendtime" csv:"sendtime"`
 	Readtime int    `xorm:"not null pk default 0 comment('收件时间') index INT(11)" json:"readtime" form:"readtime" csv:"readtime"`
 	Dateline int    `xorm:"not null default 0 comment('失效时间') INT(11)" json:"dateline" form:"dateline" csv:"dateline"`

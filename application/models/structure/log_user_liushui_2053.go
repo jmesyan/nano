@@ -12,4 +12,5 @@ type LogUserLiushui2053 struct {
 	Wins       int   `xorm:"not null default 0 comment('累计赢次数') INT(11)" json:"wins" form:"wins" csv:"wins"`
 	Cards      int   `xorm:"not null default 0 INT(11)" json:"cards" form:"cards" csv:"cards"`
 	Appid      int   `xorm:"not null default 0 comment('玩家来源') index TINYINT(4)" json:"appid" form:"appid" csv:"appid"`
+	Roomtype   int   `xorm:"not null pk default 0 INT(11)" json:"roomtype" form:"roomtype" csv:"roomtype"`
 }

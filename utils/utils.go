@@ -22,10 +22,12 @@ package utils
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/gob"
 	"errors"
 	"fmt"
 	"github.com/jmesyan/nano/nodes"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -182,4 +184,11 @@ func IntToString(intval int) string {
 func Time() int {
 	now := time.Now().Unix()
 	return Int64Toint(now)
+}
+
+func Md5(sign string) string {
+	h := md5.New()
+	io.WriteString(h, sign)
+	sum := fmt.Sprintf("%x", h.Sum(nil))
+	return sum
 }

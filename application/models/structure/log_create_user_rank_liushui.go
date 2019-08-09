@@ -10,4 +10,5 @@ type LogCreateUserRankLiushui struct {
 	Stars       int   `xorm:"not null default 0 comment('星级变化') INT(11)" json:"stars" form:"stars" csv:"stars"`
 	Score       int   `xorm:"not null default 0 comment('积分') INT(11)" json:"score" form:"score" csv:"score"`
 	Ltime       int   `xorm:"not null default 0 comment('时间') INT(11)" json:"ltime" form:"ltime" csv:"ltime"`
+	Testday     int   `xorm:"not null default 0 comment('测试数据') INT(11)" json:"testday" form:"testday" csv:"testday"`
 }

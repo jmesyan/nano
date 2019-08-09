@@ -68,10 +68,12 @@ replace (
 
 replace (
 	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 => github.com/googleapis/go-genproto v0.0.0-20190917151627-c506a9f
+	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19 => github.com/googleapis/go-genproto v0.0.0-20190307195333-5fe7a883aa19
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 => github.com/googleapis/go-genproto v0.0.0-20190404172233-64821d5d2107
 )
 
 replace (
+	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793 => github.com/golang/crypto v0.0.0-20180904163835-0709b304e793
 	golang.org/x/crypto v0.0.0-20181029021203-45a5f77698d3 => github.com/golang/crypto v0.0.0-20181029021203-45a5f77698d3
 	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85 => github.com/golang/crypto v0.0.0-20190123085648-057139ce5d2b
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 => github.com/golang/crypto v0.0.0-20181203042331-505ab145d0a9
@@ -99,7 +101,11 @@ replace (
 	golang.org/x/tools v0.0.0-20190328211700-ab21143f2384 => github.com/golang/tools v0.0.0-20190328211700-ab21143f2384
 )
 
-replace golang.org/x/lint v0.0.0-20190301231843-5614ed5bae6f => github.com/golang/lint v0.0.0-20190301231843-5614ed5bae6f
+replace (
+	golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3 => github.com/golang/lint v0.0.0-20181026193005-c67002cb31c3
+	golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961 => github.com/golang/lint v0.0.0-20190227174305-5b3e6a55c961
+	golang.org/x/lint v0.0.0-20190301231843-5614ed5bae6f => github.com/golang/lint v0.0.0-20190301231843-5614ed5bae6f
+)
 
 replace golang.org/x/time v0.0.0-20181108054448-85acf8d2951c => github.com/golang/time v0.0.0-20181108054448-85acf8d2951c
 
@@ -111,10 +117,18 @@ replace (
 	google.golang.org/grpc v1.19.0 => github.com/grpc/grpc-go v1.19.0
 )
 
+replace (
+	honnef.co/go/tools v0.0.0-20180728063816-88497007e858 => github.com/dominikh/go-tools v0.0.0-20180728063816-88497007e858
+	honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099 => github.com/dominikh/go-tools v0.0.0-20190102054323-c2f93a96b099
+	honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a => github.com/dominikh/go-tools v0.0.0-20190106161140-3f1c8253044a
+)
+
 replace google.golang.org/api v0.3.1 => github.com/googleapis/google-api-go-client v0.3.1
 
 require (
 	github.com/go-redis/redis v0.0.0-20190803144825-742f3ccb21cd
+	github.com/go-sql-driver/mysql v1.4.1
+	github.com/go-xorm/xorm v0.7.3
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.0
@@ -122,4 +136,6 @@ require (
 	github.com/nats-io/nats.go v1.8.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/urfave/cli v1.21.0 // indirect
+	gopkg.in/bsm/ratelimit.v1 v1.0.0-20160220154919-db14e161995a // indirect
+	gopkg.in/redis.v4 v4.2.4
 )

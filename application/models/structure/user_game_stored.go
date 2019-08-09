@@ -33,4 +33,5 @@ type UserGameStored struct {
 	GameRolemaxs     int     `xorm:"not null default 0 comment('满级人物次数') INT(10)" json:"game_rolemaxs" form:"game_rolemaxs" csv:"game_rolemaxs"`
 	GameLogins       int     `xorm:"not null default 0 comment('游戏登陆天数') INT(10)" json:"game_logins" form:"game_logins" csv:"game_logins"`
 	MaxLogins        int     `xorm:"not null default 0 comment('连续登陆游戏天数') INT(10)" json:"max_logins" form:"max_logins" csv:"max_logins"`
+	GameSigns        int     `xorm:"not null default 0 comment('签到天数') INT(10)" json:"game_signs" form:"game_signs" csv:"game_signs"`
 }

@@ -4,12 +4,8 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
-	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
-	"github.com/pkg/errors"
-	"github.com/rifflock/lfshook"
-	"github.com/sirupsen/logrus"
-	"hewolf/config"
-	"path"
+	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,7 +15,7 @@ import (
 var (
 	DB     *dbm
 	dbr    *xorm.Engine
-	logger *logrus.Entry
+	logger = log.New(os.Stderr, "model", log.LstdFlags|log.Llongfile)
 )
 
 type dbm struct {
@@ -27,19 +23,17 @@ type dbm struct {
 }
 
 func init() {
-	logger = filesystemLogger("stargames", "app.Models")
-	config := config.Connections[config.DefaultConnect]
-	args := fmt.Sprintf("charset=%s", config.Charset)
+	args := fmt.Sprintf("charset=%s", "utf-8")
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?%s",
-		config.Username,
-		config.Password, 
-		config.Host,
-		config.Port,
-		config.Database,
+		"root",
+		"rbnewlife",
+		"127.0.0.1",
+		"3306",
+		"stargames",
 		args,
 	)
-	if dbx, err := xorm.NewEngine(config.Driver, dsn); err != nil {
+	if dbx, err := xorm.NewEngine("mysql", dsn); err != nil {
 		logger.Fatal(err)
 	} else {
 		DB = &dbm{
@@ -62,31 +56,6 @@ func init() {
 	}()
 }
 
-func filesystemLogger(logFileName, logSource string) *logrus.Entry {
-	baseLogPaht := config.STORAGEPATH + path.Join("/logs", logFileName)
-	writer, err := rotatelogs.New(
-		baseLogPaht+"_%Y%m%d.log",
-		rotatelogs.WithLinkName(baseLogPaht), // 生成软链，指向最新日志文件
-		rotatelogs.WithMaxAge(24*time.Hour),
-		rotatelogs.WithRotationTime(time.Hour),
-	)
-	if err != nil {
-		logrus.Errorf("config local file system logger error. %+v", errors.WithStack(err))
-	}
-	lfHook := lfshook.NewHook(lfshook.WriterMap{
-		logrus.DebugLevel: writer,
-		logrus.InfoLevel:  writer,
-		logrus.WarnLevel:  writer,
-		logrus.ErrorLevel: writer,
-		logrus.FatalLevel: writer,
-		logrus.PanicLevel: writer,
-	}, &logrus.TextFormatter{})
-	logger := logrus.New()
-	logger.AddHook(lfHook)
-	loger := logger.WithField("source", logSource)
-	return loger
-}
-
 func GetDb() *xorm.Engine {
 	return DB.db
 }
@@ -94,7 +63,7 @@ func GetDb() *xorm.Engine {
 func (this *dbm) Select(sql string) []map[string]interface{} {
 	vals, err := this.db.QueryInterface(sql)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return nil
 	} else {
 		return vals
@@ -104,7 +73,7 @@ func (this *dbm) Select(sql string) []map[string]interface{} {
 func (this *dbm) SelectOne(sql string) map[string]interface{} {
 	vals, err := this.db.QueryInterface(sql)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return nil
 	} else {
 		if vals == nil {
@@ -117,12 +86,12 @@ func (this *dbm) SelectOne(sql string) map[string]interface{} {
 func (this *dbm) Insert(sql string) int64 {
 	res, err := this.db.Exec(sql)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return 0
 	} else {
 		insertid, err := res.LastInsertId()
 		if err != nil {
-			logger.Info(err.Error())
+			logger.Println(err.Error())
 			return 0
 		} else {
 			return insertid
@@ -133,12 +102,12 @@ func (this *dbm) Insert(sql string) int64 {
 func (this *dbm) Update(sql string) int64 {
 	res, err := this.db.Exec(sql)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return 0
 	} else {
 		affected, err := res.RowsAffected()
 		if err != nil {
-			logger.Info(err.Error())
+			logger.Println(err.Error())
 			return 0
 		} else {
 			return affected
@@ -149,12 +118,12 @@ func (this *dbm) Update(sql string) int64 {
 func (this *dbm) Delete(sql string) bool {
 	res, err := this.db.Exec(sql)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return false
 	} else {
 		affected, err := res.RowsAffected()
 		if err != nil {
-			logger.Info(err.Error())
+			logger.Println(err.Error())
 			return false
 		} else {
 			if affected > 0 {
@@ -232,7 +201,7 @@ func IfcToFloat64(i interface{}) float64 {
 func StrToTime(str string, tpl string) int64 {
 	t, err := time.Parse(tpl, str)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return 0
 	}
 	return t.Unix()
@@ -241,7 +210,7 @@ func StrToTime(str string, tpl string) int64 {
 func CheckEmail(email string) bool {
 	ret, err := regexp.MatchString(`([\w-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([\w-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)`, email)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return false
 	}
 	return ret
@@ -274,7 +243,7 @@ func byteIsNumber(b []byte) bool {
 	str := string(b)
 	ret, err := regexp.MatchString(`^([0-9]|\+|\-)[0-9]*$`, str)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Println(err.Error())
 		return false
 	}
 	return ret
@@ -348,7 +317,7 @@ func IncreUpdate(table string, prikeys []string, data map[string]interface{}) bo
 	sql := fmt.Sprintf(sqlf, table, strings.Join(keys, ","), strings.Join(values, ","), strings.Join(kvalues, ","))
 	_, err := dbr.Exec(sql)
 	if err != nil {
-		logger.Error(err)
+		logger.Println(err)
 		return false
 	}
 	return true
@@ -373,7 +342,7 @@ func CoverUpdate(table string, prikeys []string, data map[string]interface{}) bo
 	sql := fmt.Sprintf(sqlf, table, strings.Join(keys, ","), strings.Join(values, ","), strings.Join(kvalues, ","))
 	_, err := dbr.Exec(sql)
 	if err != nil {
-		logger.Error(err)
+		logger.Println(err)
 		return false
 	}
 	return true

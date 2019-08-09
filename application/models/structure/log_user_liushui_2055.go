@@ -1,6 +1,6 @@
 package structure
 
-type LogUserLiushui2052 struct {
+type LogUserLiushui2055 struct {
 	Ldate      int   `xorm:"not null pk default 0 comment('日期:YYYYMMDD') index(ldate_game_time) index(ldate_uid_changes) INT(8)" json:"ldate" form:"ldate" csv:"ldate"`
 	Uid        int   `xorm:"not null pk default 0 comment('玩家id') index(ldate_uid_changes) INT(11)" json:"uid" form:"uid" csv:"uid"`
 	GameTime   int   `xorm:"not null default 0 comment('在线时长') index(ldate_game_time) INT(10)" json:"game_time" form:"game_time" csv:"game_time"`
