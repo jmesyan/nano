@@ -39,11 +39,12 @@ type (
 	// Service implements a specific service, some of it's methods will be
 	// called when the correspond events is occurred.
 	Service struct {
-		Name     string              // name of service
-		Type     reflect.Type        // type of the receiver
-		Receiver reflect.Value       // receiver of methods for the service
-		Handlers map[string]*Handler // registered methods
-		Options  options             // options
+		Name        string              // name of service
+		Type        reflect.Type        // type of the receiver
+		Receiver    reflect.Value       // receiver of methods for the service
+		Handlers    map[string]*Handler // registered methods
+		SrvHandlers map[string]*Handler // registered srv methods
+		Options     options             // options
 	}
 )
 
@@ -68,8 +69,9 @@ func NewService(comp Component, opts []Option) *Service {
 }
 
 // suitableMethods returns suitable methods of typ
-func (s *Service) suitableHandlerMethods(typ reflect.Type) map[string]*Handler {
+func (s *Service) suitableHandlerMethods(typ reflect.Type) (map[string]*Handler, map[string]*Handler) {
 	methods := make(map[string]*Handler)
+	srvMethods := make(map[string]*Handler)
 	for m := 0; m < typ.NumMethod(); m++ {
 		method := typ.Method(m)
 		mt := method.Type
@@ -84,9 +86,15 @@ func (s *Service) suitableHandlerMethods(typ reflect.Type) map[string]*Handler {
 				mn = s.Options.nameFunc(mn)
 			}
 			methods[mn] = &Handler{Method: method, Type: mt.In(2), IsRawArg: raw}
+		} else if isSrvHandleMethod(method) {
+			// rewrite handler name
+			if s.Options.nameFunc != nil {
+				mn = s.Options.nameFunc(mn)
+			}
+			srvMethods[mn] = &Handler{Method: method, Type: mt.In(0)}
 		}
 	}
-	return methods
+	return methods, srvMethods
 }
 
 // ExtractHandler extract the set of methods from the
@@ -105,24 +113,27 @@ func (s *Service) ExtractHandler() error {
 	}
 
 	// Install the methods
-	s.Handlers = s.suitableHandlerMethods(s.Type)
+	s.Handlers, s.SrvHandlers = s.suitableHandlerMethods(s.Type)
 
-	if len(s.Handlers) == 0 {
+	if len(s.Handlers) == 0 && len(s.SrvHandlers) == 0 {
 		str := ""
 		// To help the user, see if a pointer receiver would work.
-		method := s.suitableHandlerMethods(reflect.PtrTo(s.Type))
-		if len(method) != 0 {
+		method, srvMethod := s.suitableHandlerMethods(reflect.PtrTo(s.Type))
+		if len(method) != 0 || len(srvMethod) != 0 {
 			str = "type " + s.Name + " has no exported methods of suitable type (hint: pass a pointer to value of that type)"
 		} else {
 			str = "type " + s.Name + " has no exported methods of suitable type"
 		}
 		fmt.Println(str)
-		//return errors.New(str)
+		return errors.New(str)
 	}
 
 	for i := range s.Handlers {
 		s.Handlers[i].Receiver = s.Receiver
 	}
 
+	for i := range s.SrvHandlers {
+		s.SrvHandlers[i].Receiver = s.Receiver
+	}
 	return nil
 }

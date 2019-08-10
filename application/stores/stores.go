@@ -22,7 +22,9 @@ type StoreSys struct {
 
 type StoreGds struct {
 	Configs map[int]*structure.GameGoldsType
-	Gsu     map[string]int
+	Gcsu    map[string]int                 //中心用户数量
+	Gucs    map[int]string                 //用户报名中心服务器
+	Gcsp    map[int]map[string]interface{} //用户中心服务器数据
 }
 
 type Temptable struct {
@@ -92,7 +94,9 @@ func (sd *StoreDatas) initSys() {
 func (sd *StoreDatas) initGds() {
 	sd.Gds = &StoreGds{
 		Configs: cache.CacheManager.GetGameGoldsType(),
-		Gsu:     make(map[string]int),
+		Gcsu:    make(map[string]int),
+		Gucs:    make(map[int]string),
+		Gcsp:    make(map[int]map[string]interface{}),
 	}
 }
 

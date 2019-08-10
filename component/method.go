@@ -75,3 +75,26 @@ func isHandlerMethod(method reflect.Method) bool {
 	}
 	return true
 }
+
+func isSrvHandleMethod(method reflect.Method) bool {
+	mt := method.Type
+	// Method must be exported.
+	if method.PkgPath != "" {
+		return false
+	}
+
+	// Method needs three ins: receiver, *Session, []byte or pointer.
+	if mt.NumIn() != 1 {
+		return false
+	}
+
+	// Method needs one outs: error
+	if mt.NumOut() != 0 {
+		return false
+	}
+
+	if t1 := mt.In(0); t1.Kind() != reflect.Ptr {
+		return false
+	}
+	return true
+}

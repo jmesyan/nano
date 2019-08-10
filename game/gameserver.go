@@ -39,6 +39,7 @@ type GameServer struct {
 	Rtype     int
 	Ridx      int
 	StartTime int
+	Service   HandlerService
 }
 
 type GameServerOpts func(g *GameServer)
@@ -49,7 +50,7 @@ func WithGameServerNatsaddrs(address string) GameServerOpts {
 	}
 }
 
-func NewGameServer(conn net.Conn, opts ...GameServerOpts) *GameServer {
+func NewGameServer(conn net.Conn, service HandlerService, opts ...GameServerOpts) *GameServer {
 	g := &GameServer{
 		conn:      conn,
 		tablesort: make(map[int32]*GameTable),
@@ -57,6 +58,7 @@ func NewGameServer(conn net.Conn, opts ...GameServerOpts) *GameServer {
 		natsaddrs: nats.DefaultURL,
 		msgch:     make(chan *nats.Msg, 64),
 		shut:      make(chan struct{}, 1),
+		Service:   service,
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -128,6 +130,14 @@ func (g *GameServer) processPacket(p *Packet) error {
 		} else {
 			fmt.Printf("the heart info is :%d\n", heart.GetNowstamp())
 			g.sendHeartBeat(heart.GetNowstamp())
+		}
+	case CMD.OGID_CONTROL_DISTRIBUTE_USER | CMD.ACK:
+		body := &ControlDistributeUsers{}
+		err := proto.Unmarshal(data, body)
+		if err != nil {
+			return err
+		} else {
+			g.Service.ProcessServer("hall.user.goldEnterRoom", reflect.ValueOf(body))
 		}
 	}
 	return nil

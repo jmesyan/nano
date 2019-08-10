@@ -5,6 +5,7 @@ import (
 	"github.com/jmesyan/nano/utils"
 	"log"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -20,24 +21,26 @@ var (
 )
 
 type cmd struct {
-	REQ                      int32
-	ACK                      int32
-	OGID_MSGBASE_CONTROLBASE int32
-	OGID_CONTROL_REGIS       int32
-	OGID_CONTROL_TABLES      int32
-	OGID_CONTROL_HEART_BEAT  int32
-	OGID_CONTROL_USER_SIGN   int32
+	REQ                          int32
+	ACK                          int32
+	OGID_MSGBASE_CONTROLBASE     int32
+	OGID_CONTROL_REGIS           int32
+	OGID_CONTROL_TABLES          int32
+	OGID_CONTROL_HEART_BEAT      int32
+	OGID_CONTROL_USER_SIGN       int32
+	OGID_CONTROL_DISTRIBUTE_USER int32
 }
 
 func NewCmd() *cmd {
 	return &cmd{
-		REQ:                      0,
-		ACK:                      134217728,
-		OGID_MSGBASE_CONTROLBASE: 0x2500,
-		OGID_CONTROL_REGIS:       9472, //注册服务器
-		OGID_CONTROL_TABLES:      9476, //注册桌子
-		OGID_CONTROL_HEART_BEAT:  9485, //心跳
-		OGID_CONTROL_USER_SIGN:   9622, //金币场进入游戏
+		REQ:                          0,
+		ACK:                          134217728,
+		OGID_MSGBASE_CONTROLBASE:     0x2500,
+		OGID_CONTROL_REGIS:           9472, //注册服务器
+		OGID_CONTROL_TABLES:          9476, //注册桌子
+		OGID_CONTROL_HEART_BEAT:      9485, //心跳
+		OGID_CONTROL_USER_SIGN:       9622, //金币场进入游戏
+		OGID_CONTROL_DISTRIBUTE_USER: 9623, //金币场玩家分桌
 	}
 }
 
@@ -59,7 +62,7 @@ func GetCenterServerByBalance(ngid int) *GameServer {
 		gid, rtype, _ := GetGameParamsByGsid(gsid)
 		grid := GetGrid(gid, rtype)
 		if grid == gcid && !IsServerMaintence(gsid) {
-			gsids[gds.Gsu[gsid]] = gsid
+			gsids[gds.Gcsu[gsid]] = gsid
 		}
 	}
 	if len(gsids) > 0 {
@@ -95,4 +98,8 @@ func IsServerMaintence(gsid string) bool {
 
 func RemoveServerManintence(gsid string) {
 	delete(sys.MAINTEN_SERVERS, fmt.Sprintf("SYS_MAINTENANCE_%s", gsid))
+}
+
+type HandlerService interface {
+	ProcessServer(route string, body reflect.Value)
 }

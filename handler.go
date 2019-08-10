@@ -72,6 +72,7 @@ type (
 	handlerService struct {
 		services       map[string]*component.Service // all registered service
 		handlers       map[string]*component.Handler // all handler method
+		srvhandlers    map[string]*component.Handler // all handler method
 		chLocalProcess chan unhandledMessage         // packets that process locally
 		chCloseSession chan *session.Session         // closed session
 		chFunction     chan func()                   // function that called in logic gorontine
@@ -90,6 +91,7 @@ func newHandlerService() *handlerService {
 	h := &handlerService{
 		services:       make(map[string]*component.Service),
 		handlers:       make(map[string]*component.Handler),
+		srvhandlers:    make(map[string]*component.Handler),
 		chLocalProcess: make(chan unhandledMessage, packetBacklog),
 		chCloseSession: make(chan *session.Session, packetBacklog),
 		chFunction:     make(chan func(), funcBacklog),
@@ -190,6 +192,9 @@ func (h *handlerService) register(comp component.Component, opts []component.Opt
 	h.services[s.Name] = s
 	for name, handler := range s.Handlers {
 		h.handlers[fmt.Sprintf("%s.%s", s.Name, name)] = handler
+	}
+	for name, handler := range s.SrvHandlers {
+		h.srvhandlers[fmt.Sprintf("%s.%s", s.Name, name)] = handler
 	}
 	return nil
 }
@@ -323,9 +328,27 @@ func (h *handlerService) processMessage(agent *agent, msg *message.Message) {
 	h.chLocalProcess <- unhandledMessage{agent, lastMid, handler.Method, args}
 }
 
+func (h *handlerService) ProcessServer(route string, body reflect.Value) {
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Println(fmt.Sprintf("ProcessServer err: %v", err))
+			println(utils.Stack())
+		}
+	}()
+	if mt, ok := h.srvhandlers[route]; ok {
+		mt.Method.Func.Call([]reflect.Value{body})
+	} else {
+		fmt.Printf("the is no srv handler, route is:%s, body is:%#v", route, body)
+	}
+}
+
 // DumpServices outputs all registered services
 func (h *handlerService) DumpServices() {
 	for name := range h.handlers {
 		logger.Println("registered service", name)
+	}
+
+	for name := range h.srvhandlers {
+		logger.Println("registered srv service", name)
 	}
 }

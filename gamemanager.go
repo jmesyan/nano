@@ -52,7 +52,7 @@ func (g *GameManager) watcher() {
 		}
 
 		// start a new goroutine to handle the new connection
-		game.NewGameServer(conn)
+		game.NewGameServer(conn, handler)
 	}
 }
 func (g *GameManager) AfterInit() {
