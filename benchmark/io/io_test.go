@@ -3,7 +3,6 @@
 package io
 
 import (
-	"github.com/jmesyan/nano/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -15,7 +14,6 @@ import (
 	"github.com/jmesyan/nano"
 	"github.com/jmesyan/nano/benchmark/testdata"
 	"github.com/jmesyan/nano/component"
-	"github.com/jmesyan/nano/serialize/protobuf"
 	"github.com/jmesyan/nano/session"
 )
 
@@ -49,7 +47,7 @@ func (h *TestHandler) Ping(s *session.Session, data *testdata.Ping) error {
 
 func server() {
 	nano.Register(&TestHandler{})
-	utils.SetSerializer(protobuf.NewSerializer())
+	//utils.SetSerializer(protobuf.NewSerializer())
 
 	nano.Listen(addr)
 }
@@ -76,7 +74,7 @@ func client() {
 }
 
 func TestIO(t *testing.T) {
-	go server()
+	server()
 
 	// wait server startup
 	time.Sleep(1 * time.Second)

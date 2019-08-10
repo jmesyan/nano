@@ -10,7 +10,7 @@ import (
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"net"
-	"strings"
+	"reflect"
 	"time"
 )
 
@@ -68,8 +68,22 @@ func NewGameServer(conn net.Conn, opts ...GameServerOpts) *GameServer {
 }
 func (g *GameServer) processPacket(p *Packet) error {
 	fmt.Printf("processPacket:%#v\n", p)
+	tick := p.T
 	data := p.Data
 	cmd := p.Cmd
+	if tick > 0 {
+		switch cmd {
+		case CMD.OGID_CONTROL_USER_SIGN | CMD.REQ:
+			body := &ControlUserSign{}
+			err := proto.Unmarshal(data, body)
+			if err != nil {
+				return err
+			} else {
+				TickHandler.ExecTick(tick, reflect.ValueOf(body))
+			}
+		}
+		return nil
+	}
 	switch cmd {
 	case CMD.OGID_CONTROL_REGIS | CMD.ACK:
 		//握手
@@ -121,13 +135,14 @@ func (g *GameServer) processPacket(p *Packet) error {
 
 func (g *GameServer) sendHeartBeat(t uint32) {
 	if t > 0 {
-		g.sendString(fmt.Sprintf("02BEAT%d", t))
+		g.SendString("02BEAT%d", t)
 	} else {
-		g.sendString("02BEAT")
+		g.SendString("02BEAT")
 	}
 }
 
-func (g *GameServer) sendString(str string) bool {
+func (g *GameServer) SendString(format string, args ...interface{}) bool {
+	str := fmt.Sprintf(format, args...)
 	if str == "B" {
 		g.dispose()
 		return false
@@ -163,9 +178,8 @@ func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
 	logger.Println("initGoldServers", g.gsid, mgsids)
 	for _, mgid := range mgsids {
 		for gsid, server := range serversort {
-			gsids := strings.Split(gsid, "_")
-			gid, rtype, ridx := utils.StringToInt(gsids[0]), utils.StringToInt(gsids[1]), utils.StringToInt(gsids[2])
-			if mgid == gid && !sys.MAINTEN_SERVERS[fmt.Sprintf("SYS_MAINTENANCE_%s", gsid)] && ridx%2 == g.ridx%2 {
+			gid, rtype, ridx := GetGameParamsByGsid(gsid)
+			if mgid == gid && !IsServerMaintence(gsid) && ridx%2 == g.ridx%2 {
 				mtids := []int32{}
 				for mtid, _ := range server.tablesort {
 					mtids = append(mtids, mtid)
@@ -201,10 +215,9 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 			msg := string(data)
 			if len(gd.Censerver) > 0 {
 				for gsid, server := range serversort {
-					gsids := strings.Split(gsid, "_")
-					gid, rtype, ridx := utils.StringToInt(gsids[0]), utils.StringToInt(gsids[1]), utils.StringToInt(gsids[2])
+					gid, rtype, ridx := GetGameParamsByGsid(gsid)
 					grid := fmt.Sprintf("%d_%d", gid, rtype)
-					if grid == gd.Censerver && !sys.MAINTEN_SERVERS[fmt.Sprintf("SYS_MAINTENANCE_%s", gsid)] && ridx%2 == g.ridx%2 {
+					if grid == gd.Censerver && !IsServerMaintence(gsid) && ridx%2 == g.ridx%2 {
 						server.N2S(g.gid, g.rtype, g.ridx, "01", msg)
 					}
 				}
@@ -238,7 +251,7 @@ func (g *GameServer) N2S(gid, rtype, ridx int, cmd, msg string) string {
 	}
 	mgid, mrtype, mridx := g.formatGsid(gid), g.formatGsid(rtype), g.formatGsid(ridx)
 	data := fmt.Sprintf("04AAAA%s%s%s%s%s", mgid, cmd, mrtype, mridx, msg)
-	g.sendString(data)
+	g.SendString(data)
 	return data
 }
 

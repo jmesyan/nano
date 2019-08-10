@@ -22,6 +22,7 @@ type StoreSys struct {
 
 type StoreGds struct {
 	Configs map[int]*structure.GameGoldsType
+	Gsu     map[string]int
 }
 
 type Temptable struct {
@@ -89,8 +90,10 @@ func (sd *StoreDatas) initSys() {
 }
 
 func (sd *StoreDatas) initGds() {
-	sd.Gds = &StoreGds{}
-	sd.Gds.Configs = cache.CacheManager.GetGameGoldsType()
+	sd.Gds = &StoreGds{
+		Configs: cache.CacheManager.GetGameGoldsType(),
+		Gsu:     make(map[string]int),
+	}
 }
 
 func (sd *StoreDatas) initP2p() {

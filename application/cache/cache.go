@@ -163,7 +163,7 @@ func (cm *cacheManager) RemoveMaintence() bool {
 	return cm.Del(key)
 }
 
-func (cm *cacheManager) RemoveGameManintence(gsid string) bool {
+func (cm *cacheManager) RemoveServerManintence(gsid string) bool {
 	key := cm.CacheKey("maintenance", gsid)
 	return cm.Del(key)
 }

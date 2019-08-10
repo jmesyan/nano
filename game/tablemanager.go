@@ -5,7 +5,6 @@ import (
 	"github.com/jmesyan/nano/application/cache"
 	"github.com/jmesyan/nano/application/stores"
 	"github.com/jmesyan/nano/utils"
-	"strings"
 )
 
 var (
@@ -21,11 +20,10 @@ func NewTableManager() *RandomAssignGameTable {
 }
 
 func (tm *RandomAssignGameTable) registerTables(gsid string, tables []*ControlRoomUsersTableInfo) {
-	gsids := strings.Split(gsid, "_")
-	gid := utils.StringToInt(gsids[0])
+	gid, _, _ := GetGameParamsByGsid(gsid)
 	if len(tables) > 0 {
-		delete(sys.MAINTEN_SERVERS, fmt.Sprintf("SYS_MAINTENANCE_%s", gsid))
-		cache.CacheManager.RemoveGameManintence(gsid)
+		RemoveServerManintence(gsid)
+		cache.CacheManager.RemoveServerManintence(gsid)
 		codeCmp := func(a interface{}, b interface{}) bool {
 			c1 := a.(int32)
 			c2 := b.(int32)
