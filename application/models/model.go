@@ -23,7 +23,7 @@ type dbm struct {
 }
 
 func init() {
-	args := fmt.Sprintf("charset=%s", "utf-8")
+	args := fmt.Sprintf("charset=%s", "utf8")
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?%s",
 		"root",

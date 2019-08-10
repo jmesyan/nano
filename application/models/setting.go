@@ -163,7 +163,7 @@ func GetGameGoldsType() []*structure.GameGoldsType {
 	err := dbr.Find(&data)
 	if err != nil {
 		logger.Println(err.Error())
-		return data
+		return nil
 	}
 	return data
 }
