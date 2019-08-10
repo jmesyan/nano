@@ -48,16 +48,18 @@ func GetServerByGSID(gsid string) *GameServer {
 	return nil
 }
 
-func GetCenterServerByBalance() *GameServer {
+func GetCenterServerByBalance(ngid int) *GameServer {
+	config, ok := gds.Configs[ngid]
+	if !ok {
+		return nil
+	}
+	gcid := config.Censerver
 	gsids := make(map[int]string)
 	for gsid, _ := range serversort {
 		gid, rtype, _ := GetGameParamsByGsid(gsid)
 		grid := GetGrid(gid, rtype)
-		if config, ok := gds.Configs[gid]; ok {
-			gcid := config.Censerver
-			if grid == gcid && !IsServerMaintence(gsid) {
-				gsids[gds.Gsu[gsid]] = gsid
-			}
+		if grid == gcid && !IsServerMaintence(gsid) {
+			gsids[gds.Gsu[gsid]] = gsid
 		}
 	}
 	if len(gsids) > 0 {
