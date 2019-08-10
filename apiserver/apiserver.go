@@ -2,7 +2,15 @@ package apiserver
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/application/stores"
+	"log"
 	"net"
+	"os"
+)
+
+var (
+	sys    = stores.StoresHandler.Sys
+	logger = log.New(os.Stderr, "[apiserver]", log.LstdFlags|log.Llongfile)
 )
 
 type ApiServer struct {

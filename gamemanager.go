@@ -36,6 +36,9 @@ func NewGameManager(opts ...GameManagerOpts) *GameManager {
 	return g
 }
 func (g *GameManager) Init() {
+	go g.watcher()
+}
+func (g *GameManager) watcher() {
 	listen, err := net.Listen("tcp", g.listenaddrs)
 	if err != nil {
 		fmt.Println(err)

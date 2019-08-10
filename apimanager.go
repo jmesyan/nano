@@ -1,18 +1,15 @@
-package apiserver
+package nano
 
 import (
 	"fmt"
-	"github.com/jmesyan/nano"
+	"github.com/jmesyan/nano/apiserver"
 	"github.com/jmesyan/nano/application/stores"
-	"log"
 	"net"
-	"os"
 )
 
 var (
 	ApiManagerHandler *ApiManager
 	DefautApiAddrs    = "127.0.0.1:20066"
-	logger            = log.New(os.Stderr, "apiserver", log.LstdFlags|log.Llongfile)
 )
 var (
 	sys = stores.StoresHandler.Sys
@@ -43,6 +40,10 @@ func NewApiManager(opts ...ApiManagerOpts) *ApiManager {
 }
 
 func (am *ApiManager) Init() {
+	go am.watcher()
+}
+
+func (am *ApiManager) watcher() {
 	listen, err := net.Listen("tcp", am.listenaddrs)
 	if err != nil {
 		fmt.Println(err)
@@ -56,7 +57,7 @@ func (am *ApiManager) Init() {
 		}
 
 		// start a new goroutine to handle the new connection
-		NewApiServer(conn)
+		apiserver.NewApiServer(conn)
 	}
 }
 
@@ -73,5 +74,5 @@ func (am *ApiManager) Shutdown() {
 
 func init() {
 	ApiManagerHandler = NewApiManager()
-	nano.Register(ApiManagerHandler)
+	Register(ApiManagerHandler)
 }
