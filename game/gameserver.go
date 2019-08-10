@@ -33,12 +33,12 @@ type GameServer struct {
 	client    *nats.Conn
 	msgch     chan *nats.Msg
 	shut      chan struct{}
-	gsid      string
-	gid       int
-	rtype     int
-	ridx      int
-	startTime int
 	tablesort map[int32]*GameTable
+	Gsid      string
+	Gid       int
+	Rtype     int
+	Ridx      int
+	StartTime int
 }
 
 type GameServerOpts func(g *GameServer)
@@ -92,7 +92,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 		if err != nil {
 			return err
 		} else {
-			fmt.Printf("server start: gid:%d, the rtype is:%d, the ridx is:%d\n", register.GetGid(), register.GetRidx(), register.GetRtype())
+			fmt.Printf("server start: Gid:%d, the Rtype is:%d, the Ridx is:%d\n", register.GetGid(), register.GetRidx(), register.GetRtype())
 			g.Init(register.GetGid(), register.GetRidx(), register.GetRtype())
 		}
 	case CMD.OGID_CONTROL_TABLES | CMD.ACK:
@@ -102,21 +102,21 @@ func (g *GameServer) processPacket(p *Packet) error {
 		if err != nil {
 			return err
 		} else {
-			fmt.Printf("the desks info is  gid:%d, the rtype is:%d, the ridx is:%d \n", desk.GetGid(), desk.GetRtype(), desk.GetRidx())
-			gid := desk.GetGid()
+			fmt.Printf("the desks info is  Gid:%d, the Rtype is:%d, the Ridx is:%d \n", desk.GetGid(), desk.GetRtype(), desk.GetRidx())
+			Gid := desk.GetGid()
 			tables := desk.Tableinfo
-			if gid < 10 {
+			if Gid < 10 {
 				time.AfterFunc(2*time.Second, func() {
 					g.initMatchServers(tables)
 				})
-			} else if gid >= 10 && gid < 20 {
+			} else if Gid >= 10 && Gid < 20 {
 				time.AfterFunc(2*time.Second, func() {
 					g.initGoldServers(tables)
 				})
 			} else {
-				logger.Println("initTables:", g.gsid, tables)
+				logger.Println("initTables:", g.Gsid, tables)
 				g.initTables(tables)
-				TableManager.registerTables(g.gsid, tables)
+				TableManager.registerTables(g.Gsid, tables)
 			}
 		}
 	case CMD.OGID_CONTROL_HEART_BEAT | CMD.ACK:
@@ -166,20 +166,20 @@ func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
 	//暂无比赛
 }
 func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
-	grid := fmt.Sprintf("%d_%d", g.gid, g.rtype)
-	mgsids := []int{}
+	grid := fmt.Sprintf("%d_%d", g.Gid, g.Rtype)
+	mGsids := []int{}
 	for k, v := range gds.Configs {
 		censerver := v.Censerver
-		if len(censerver) > 0 && censerver == grid && !utils.InArray(k, mgsids) {
-			mgsids = append(mgsids, k)
+		if len(censerver) > 0 && censerver == grid && !utils.InArray(k, mGsids) {
+			mGsids = append(mGsids, k)
 		}
 	}
 
-	logger.Println("initGoldServers", g.gsid, mgsids)
-	for _, mgid := range mgsids {
-		for gsid, server := range serversort {
-			gid, rtype, ridx := GetGameParamsByGsid(gsid)
-			if mgid == gid && !IsServerMaintence(gsid) && ridx%2 == g.ridx%2 {
+	logger.Println("initGoldServers", g.Gsid, mGsids)
+	for _, mGid := range mGsids {
+		for Gsid, server := range serversort {
+			Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
+			if mGid == Gid && !IsServerMaintence(Gsid) && Ridx%2 == g.Ridx%2 {
 				mtids := []int32{}
 				for mtid, _ := range server.tablesort {
 					mtids = append(mtids, mtid)
@@ -190,7 +190,7 @@ func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
 					continue
 				}
 				msg := string(data)
-				server.N2S(gid, rtype, ridx, "01", msg)
+				server.N2S(Gid, Rtype, Ridx, "01", msg)
 			}
 		}
 	}
@@ -201,8 +201,8 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 		g.addTable(table)
 	}
 	//金币场
-	if g.gid >= 1000 && g.gid < 5000 {
-		if gd, ok := gds.Configs[g.gid]; ok {
+	if g.Gid >= 1000 && g.Gid < 5000 {
+		if gd, ok := gds.Configs[g.Gid]; ok {
 			mtids := []int32{}
 			for mtid, _ := range g.tablesort {
 				mtids = append(mtids, mtid)
@@ -214,11 +214,11 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 			}
 			msg := string(data)
 			if len(gd.Censerver) > 0 {
-				for gsid, server := range serversort {
-					gid, rtype, ridx := GetGameParamsByGsid(gsid)
-					grid := fmt.Sprintf("%d_%d", gid, rtype)
-					if grid == gd.Censerver && !IsServerMaintence(gsid) && ridx%2 == g.ridx%2 {
-						server.N2S(g.gid, g.rtype, g.ridx, "01", msg)
+				for Gsid, server := range serversort {
+					Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
+					grid := fmt.Sprintf("%d_%d", Gid, Rtype)
+					if grid == gd.Censerver && !IsServerMaintence(Gsid) && Ridx%2 == g.Ridx%2 {
+						server.N2S(g.Gid, g.Rtype, g.Ridx, "01", msg)
 					}
 				}
 			}
@@ -231,7 +231,7 @@ func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
 	if gametable == nil {
 		gametable = NewGameTable()
 	}
-	gametable.Init(g.gsid, table)
+	gametable.Init(g.Gsid, table)
 	gametable.gameserver = g
 	g.tablesort[gametable.tableid] = gametable
 	alltablesort[gametable.tableid] = gametable
@@ -245,12 +245,12 @@ func (g *GameServer) getTable(tableid int32) *GameTable {
 	return nil
 }
 
-func (g *GameServer) N2S(gid, rtype, ridx int, cmd, msg string) string {
+func (g *GameServer) N2S(Gid, Rtype, Ridx int, cmd, msg string) string {
 	if len(cmd) == 0 {
 		cmd = "00"
 	}
-	mgid, mrtype, mridx := g.formatGsid(gid), g.formatGsid(rtype), g.formatGsid(ridx)
-	data := fmt.Sprintf("04AAAA%s%s%s%s%s", mgid, cmd, mrtype, mridx, msg)
+	mGid, mRtype, mRidx := g.formatGsid(Gid), g.formatGsid(Rtype), g.formatGsid(Ridx)
+	data := fmt.Sprintf("04AAAA%s%s%s%s%s", mGid, cmd, mRtype, mRidx, msg)
 	g.SendString(data)
 	return data
 }
@@ -299,26 +299,26 @@ func (g *GameServer) Status() int32 {
 	return g.status
 }
 
-func (g *GameServer) Init(gid, rtype, ridx int32) {
-	g.gid, g.rtype, g.ridx = int(gid), int(rtype), int(ridx)
-	g.gsid = fmt.Sprintf("%d_%d_%d", gid, rtype, ridx)
-	if oldserver, ok := serversort[g.gsid]; ok {
+func (g *GameServer) Init(Gid, Rtype, Ridx int32) {
+	g.Gid, g.Rtype, g.Ridx = int(Gid), int(Rtype), int(Ridx)
+	g.Gsid = fmt.Sprintf("%d_%d_%d", Gid, Rtype, Ridx)
+	if oldserver, ok := serversort[g.Gsid]; ok {
 		g.tablesort = oldserver.tablesort
 		oldserver.tablesort = nil
-		g.startTime = oldserver.startTime
+		g.StartTime = oldserver.StartTime
 		g.node = oldserver.node
 		g.client = oldserver.client
 	} else {
-		serversort[g.gsid] = g
+		serversort[g.Gsid] = g
 		g.InitNats()
 	}
-	g.startTime = utils.Time()
+	g.StartTime = utils.Time()
 	g.status = gameserverStatusWorking
 }
 
 func (g *GameServer) InitNats() {
 	var err error
-	nid := utils.GenerateNodeId(nodes.NodeGameServer, g.gsid)
+	nid := utils.GenerateNodeId(nodes.NodeGameServer, g.Gsid)
 	n := nodes.NewNode("GameServer", nid, nodes.NodeGameServer)
 	dcm.RegisterNode(nid, n)
 	g.node = n
