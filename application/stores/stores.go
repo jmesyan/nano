@@ -20,11 +20,23 @@ type StoreSys struct {
 	MAINTEN_SERVERS   map[string]bool
 }
 
+type StoreGoldsDistributeTable struct {
+	Gid        int32
+	Rtype      int32
+	Ridx       int32
+	Tid        int32
+	Users      []int32
+	Multiples  []int32
+	Bonusround int32
+	Rank       int32
+}
+
 type StoreGds struct {
 	Configs map[int]*structure.GameGoldsType
-	Gcsu    map[string]int                 //中心用户数量
-	Gucs    map[int]string                 //用户报名中心服务器
-	Gcsp    map[int]map[string]interface{} //用户中心服务器数据
+	Gcsu    map[string]int                        //中心用户数量
+	Gucs    map[int]string                        //用户报名中心服务器
+	Gcsp    map[int]map[string]interface{}        //用户中心服务器数据
+	Gdst    map[string]*StoreGoldsDistributeTable //桌子分桌信息
 }
 
 type Temptable struct {
@@ -97,6 +109,7 @@ func (sd *StoreDatas) initGds() {
 		Gcsu:    make(map[string]int),
 		Gucs:    make(map[int]string),
 		Gcsp:    make(map[int]map[string]interface{}),
+		Gdst:    make(map[string]*StoreGoldsDistributeTable),
 	}
 }
 
