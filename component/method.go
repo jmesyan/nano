@@ -21,7 +21,9 @@
 package component
 
 import (
+	"github.com/jmesyan/nano/utils"
 	"reflect"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -76,7 +78,7 @@ func isHandlerMethod(method reflect.Method) bool {
 	return true
 }
 
-func isSrvHandleMethod(method reflect.Method) bool {
+func isSrvHandleMethod(name string, method reflect.Method) bool {
 	mt := method.Type
 	// Method must be exported.
 	if method.PkgPath != "" {
@@ -94,6 +96,11 @@ func isSrvHandleMethod(method reflect.Method) bool {
 	}
 
 	if t1 := mt.In(0); t1.Kind() != reflect.Ptr {
+		return false
+	}
+
+	mname := strings.ToLower(name)
+	if utils.InArray(mname, []string{"afterinit", "shutdown", "beforeshutdown"}) {
 		return false
 	}
 	return true

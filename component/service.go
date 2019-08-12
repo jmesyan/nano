@@ -22,7 +22,6 @@ package component
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -86,7 +85,7 @@ func (s *Service) suitableHandlerMethods(typ reflect.Type) (map[string]*Handler,
 				mn = s.Options.nameFunc(mn)
 			}
 			methods[mn] = &Handler{Method: method, Type: mt.In(2), IsRawArg: raw}
-		} else if isSrvHandleMethod(method) {
+		} else if isSrvHandleMethod(mn, method) {
 			// rewrite handler name
 			if s.Options.nameFunc != nil {
 				mn = s.Options.nameFunc(mn)
@@ -124,7 +123,6 @@ func (s *Service) ExtractHandler() error {
 		} else {
 			str = "type " + s.Name + " has no exported methods of suitable type"
 		}
-		fmt.Println(str)
 		return errors.New(str)
 	}
 
