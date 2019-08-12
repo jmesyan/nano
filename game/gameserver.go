@@ -99,6 +99,14 @@ func (g *GameServer) processPacket(p *Packet) error {
 			} else {
 				TickHandler.ExecTick(tick, reflect.ValueOf(body))
 			}
+		case CMD.OGID_ROOMSVR_ENTERROOM|CMD.ACK:
+			body := &ControlUserEnterroom{}
+			err := proto.Unmarshal(data, body)
+			if err != nil {
+				return err
+			} else {
+				TickHandler.ExecTick(tick, reflect.ValueOf(body))
+			}
 		}
 		return nil
 	}
