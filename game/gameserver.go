@@ -39,7 +39,8 @@ type GameServer struct {
 	Rtype     int
 	Ridx      int
 	StartTime int
-	Service   HandlerService
+	Service   GameService
+	c2sTopic  string
 }
 
 type GameServerOpts func(g *GameServer)
@@ -50,7 +51,7 @@ func WithGameServerNatsaddrs(address string) GameServerOpts {
 	}
 }
 
-func NewGameServer(conn net.Conn, service HandlerService, opts ...GameServerOpts) *GameServer {
+func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpts) *GameServer {
 	g := &GameServer{
 		conn:      conn,
 		tablesort: make(map[int32]*GameTable),
@@ -70,9 +71,20 @@ func NewGameServer(conn net.Conn, service HandlerService, opts ...GameServerOpts
 }
 func (g *GameServer) processPacket(p *Packet) error {
 	fmt.Printf("processPacket:%#v\n", p)
+	cid := int(p.Cid)
+	heart := p.N
 	tick := p.T
 	data := p.Data
 	cmd := p.Cmd
+	if cid > 0 {
+		cn := GetChannel(cid)
+		if cn != nil {
+			cn.S2C(heart, cmd, data) //消息转发到客户端
+		} else {
+			fmt.Printf("can't find the channel:%#v", p)
+		}
+		return nil
+	}
 	if tick > 0 {
 		switch cmd {
 		case CMD.OGID_CONTROL_USER_SIGN | CMD.REQ:
@@ -170,6 +182,7 @@ func (g *GameServer) SendString(format string, args ...interface{}) bool {
 func (g *GameServer) dispose() {
 	logger.Printf("============服务器%s析构开始=====================\n", g.node.Nid)
 	dcm.DeRegisterNode(g.node.Nid)
+	g.Service.RemoveServerByGSID(g.Gsid)
 }
 
 func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
@@ -186,6 +199,7 @@ func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
 	}
 
 	logger.Println("initGoldServers", g.Gsid, mGsids)
+	serversort := g.Service.GetServerSort()
 	for _, mGid := range mGsids {
 		for Gsid, server := range serversort {
 			Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
@@ -224,6 +238,7 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 			}
 			msg := string(data)
 			if len(gd.Censerver) > 0 {
+				serversort := g.Service.GetServerSort()
 				for Gsid, server := range serversort {
 					Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
 					grid := fmt.Sprintf("%d_%d", Gid, Rtype)
@@ -312,14 +327,15 @@ func (g *GameServer) Status() int32 {
 func (g *GameServer) Init(Gid, Rtype, Ridx int32) {
 	g.Gid, g.Rtype, g.Ridx = int(Gid), int(Rtype), int(Ridx)
 	g.Gsid = fmt.Sprintf("%d_%d_%d", Gid, Rtype, Ridx)
-	if oldserver, ok := serversort[g.Gsid]; ok {
+	oldserver := g.Service.GetServerByGSID(g.Gsid)
+	if oldserver != nil {
 		g.tablesort = oldserver.tablesort
 		oldserver.tablesort = nil
 		g.StartTime = oldserver.StartTime
 		g.node = oldserver.node
 		g.client = oldserver.client
 	} else {
-		serversort[g.Gsid] = g
+		g.Service.RegisterServer(g.Gsid, g)
 		g.InitNats()
 	}
 	g.StartTime = utils.Time()
@@ -353,4 +369,28 @@ func (g *GameServer) InitNats() {
 		return
 	}
 	//设置topic
+	g.c2sTopic = fmt.Sprintf("%s.c2s", g.NID())
+	//监听消息
+	go g.watcher()
+}
+func (g *GameServer) watcher() {
+	for {
+		select {
+		case msg := <-g.msgch:
+			g.HandleMsg(msg)
+		case <-g.shut:
+			logger.Println("receive stop msg")
+			close(g.msgch)
+			g.node.Status = nodes.NodeStoping
+			return
+		}
+	}
+}
+
+func (g *GameServer) HandleMsg(msg *nats.Msg) {
+	logger.Printf("handle gameserver nats msg:%#v\n", msg)
+	switch msg.Subject {
+	case g.c2sTopic:
+		g.SendString(string(msg.Data))
+	}
 }

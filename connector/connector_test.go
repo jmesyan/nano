@@ -1,4 +1,4 @@
-package nano
+package connector
 
 import (
 	"math/rand"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestChannel_Add(t *testing.T) {
-	c := NewGroup("test_add")
+	c := NewConnector()
 
 	var paraCount = 100
 	w := make(chan bool, paraCount)

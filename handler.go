@@ -328,20 +328,6 @@ func (h *handlerService) processMessage(agent *agent, msg *message.Message) {
 	h.chLocalProcess <- unhandledMessage{agent, lastMid, handler.Method, args}
 }
 
-func (h *handlerService) ProcessServer(route string, body reflect.Value) {
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Println(fmt.Sprintf("ProcessServer err: %v", err))
-			println(utils.Stack())
-		}
-	}()
-	if mt, ok := h.srvhandlers[route]; ok {
-		mt.Method.Func.Call([]reflect.Value{body})
-	} else {
-		fmt.Printf("the is no srv handler, route is:%s, body is:%#v", route, body)
-	}
-}
-
 // DumpServices outputs all registered services
 func (h *handlerService) DumpServices() {
 	for name := range h.handlers {

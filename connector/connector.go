@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package nano
+package connector
 
 import (
 	"errors"
@@ -29,18 +29,31 @@ import (
 	"github.com/jmesyan/nano/users"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
+	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 var (
+	logger           = log.New(os.Stderr, "[connector]", log.LstdFlags|log.Llongfile)
+	envdebug         = true
 	ConnectorHandler *Connector
 )
 
 const (
 	connectorStatusWorking = 0
 	connectorStatusClosed  = 1
+)
+
+var (
+	ErrMemberNotFound       = errors.New("member not found in the connector")
+	ErrClosedConnector      = errors.New("connector closed")
+	ErrSessionDuplication   = errors.New("session has existed in the current connector")
+	ErrCloseClosedConnector = errors.New("close closed connector")
+	ResponseSuccess         = []byte("SUCCESS")
+	ResponseFail            = []byte("FAIL")
 )
 
 // SessionFilter represents a filter which was used to filter session when Multicast,
@@ -60,6 +73,7 @@ type Connector struct {
 	shut      chan struct{}
 	kickTopic string
 	pushTopic string
+	s2cTopic  string
 }
 
 type ConnectorOpts func(g *Connector)
@@ -84,7 +98,6 @@ func NewConnector(opts ...ConnectorOpts) *Connector {
 			opt(c)
 		}
 	}
-	ConnectorHandler = c
 	return c
 }
 
@@ -125,6 +138,7 @@ func (c *Connector) Init() {
 	//设置topic
 	c.kickTopic = utils.GenerateTopic(c.node.Nid, "kick")
 	c.pushTopic = utils.GenerateTopic(c.node.Nid, "push")
+	c.s2cTopic = utils.GenerateTopic(c.node.Nid, "s2c")
 }
 
 func (c *Connector) AfterInit() {
@@ -161,19 +175,19 @@ func (c *Connector) watcher() {
 
 func (c *Connector) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle connector nats msg:%#v\n", msg)
-	payload := &MsgLoad{}
-	err := utils.Serializer.Unmarshal(msg.Data, payload)
-	if err != nil {
-		logger.Println(err)
-		msg.Respond(ResponseFail)
-		return
-	}
-	uid := payload.Receiver.Uid
-	sid := payload.Receiver.Sid
-	nid := payload.Receiver.Nid
-	data := payload.Msg
 	switch msg.Subject {
 	case c.kickTopic:
+		payload := &MsgLoad{}
+		err := utils.Serializer.Unmarshal(msg.Data, payload)
+		if err != nil {
+			logger.Println(err)
+			msg.Respond(ResponseFail)
+			return
+		}
+		uid := payload.Receiver.Uid
+		sid := payload.Receiver.Sid
+		nid := payload.Receiver.Nid
+		data := payload.Msg
 		//收到踢人消息
 		state := 0
 		if tmp, ok := data["state"]; ok {
@@ -202,7 +216,18 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 				c.RemoveUser(uid)
 			}
 		}
+		msg.Respond(ResponseSuccess)
 	case c.pushTopic:
+		payload := &MsgLoad{}
+		err := utils.Serializer.Unmarshal(msg.Data, payload)
+		if err != nil {
+			logger.Println(err)
+			msg.Respond(ResponseFail)
+			return
+		}
+		uid := payload.Receiver.Uid
+		sid := payload.Receiver.Sid
+		nid := payload.Receiver.Nid
 		if nid == c.node.Nid {
 			sess, err := c.Member(uid)
 			if err != nil {
@@ -217,8 +242,24 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 				}
 			}
 		}
+		msg.Respond(ResponseSuccess)
+	case c.s2cTopic:
+		payload := make(map[string]interface{})
+		err := utils.Serializer.Unmarshal(msg.Data, payload)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		uid := int(payload["uid"].(float64))
+		sess, err := c.Member(uid)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		delete(payload, "uid")
+		sess.Push("game", payload)
 	}
-	msg.Respond(ResponseSuccess)
+
 }
 
 type MsgReceiver struct {
@@ -343,7 +384,7 @@ func (c *Connector) Multicast(route string, v interface{}, filter SessionFilter)
 		return err
 	}
 
-	if env.debug {
+	if envdebug {
 		logger.Println(fmt.Sprintf("Type=Multicast Route=%s, Data=%+v", route, v))
 	}
 
@@ -373,7 +414,7 @@ func (c *Connector) Broadcast(route string, v interface{}) error {
 		return err
 	}
 
-	if env.debug {
+	if envdebug {
 		logger.Println(fmt.Sprintf("Type=Broadcast Route=%s, Data=%+v", route, v))
 	}
 
@@ -401,7 +442,7 @@ func (c *Connector) Add(s *session.Session) error {
 		return ErrClosedConnector
 	}
 
-	if env.debug {
+	if envdebug {
 		logger.Println(fmt.Sprintf("Add session to connector, ID=%d, UID=%d", s.ID(), s.UID()))
 	}
 
@@ -413,7 +454,6 @@ func (c *Connector) Add(s *session.Session) error {
 	if ok {
 		return ErrSessionDuplication
 	}
-
 	c.sessions[id] = s
 	return nil
 }
@@ -424,7 +464,7 @@ func (c *Connector) Leave(s *session.Session) error {
 		return ErrClosedConnector
 	}
 
-	if env.debug {
+	if envdebug {
 		logger.Println(fmt.Sprintf("Remove session from connector, UID=%d", s.UID()))
 	}
 
@@ -474,9 +514,4 @@ func (c *Connector) Close() error {
 	// release all reference
 	c.sessions = make(map[int64]*session.Session)
 	return nil
-}
-
-func init() {
-	ConnectorHandler = NewConnector()
-	Register(ConnectorHandler)
 }

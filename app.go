@@ -22,6 +22,7 @@ package nano
 
 import (
 	"fmt"
+	"github.com/jmesyan/nano/connector"
 	"github.com/jmesyan/nano/serialize"
 	"github.com/jmesyan/nano/utils"
 	"net"
@@ -39,6 +40,11 @@ import (
 var (
 	running int32
 )
+
+func init() {
+	connector.ConnectorHandler = connector.NewConnector()
+	Register(connector.ConnectorHandler)
+}
 
 func listen(addr string, isWs bool, opts ...Option) {
 	// mark application running

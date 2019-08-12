@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -15,7 +14,6 @@ var (
 )
 var (
 	logger       = log.New(os.Stderr, "game", log.LstdFlags|log.Llongfile)
-	serversort   = make(map[string]*GameServer)
 	alltablesort = make(map[int32]*GameTable)
 	ticker       = 0
 )
@@ -44,39 +42,6 @@ func NewCmd() *cmd {
 	}
 }
 
-func GetServerByGSID(gsid string) *GameServer {
-	if server, ok := serversort[gsid]; ok {
-		return server
-	}
-	return nil
-}
-
-func GetCenterServerByBalance(ngid int) *GameServer {
-	config, ok := gds.Configs[ngid]
-	if !ok {
-		return nil
-	}
-	gcid := config.Censerver
-	gsids := make(map[int]string)
-	for gsid, _ := range serversort {
-		gid, rtype, _ := GetGameParamsByGsid(gsid)
-		grid := GetGrid(gid, rtype)
-		if grid == gcid && !IsServerMaintence(gsid) {
-			gsids[gds.Gcsu[gsid]] = gsid
-		}
-	}
-	if len(gsids) > 0 {
-		gsorts := make([]int, len(gsids))
-		for k, _ := range gsids {
-			gsorts = append(gsorts, k)
-		}
-		sort.Ints(gsorts)
-		gsid := gsids[gsorts[0]]
-		return serversort[gsid]
-	}
-	return nil
-}
-
 func GetGameParamsByGsid(gsid string) (gid, rtype, ridx int) {
 	gsids := strings.Split(gsid, "_")
 	if len(gsids) == 3 {
@@ -100,6 +65,10 @@ func RemoveServerManintence(gsid string) {
 	delete(sys.MAINTEN_SERVERS, fmt.Sprintf("SYS_MAINTENANCE_%s", gsid))
 }
 
-type HandlerService interface {
+type GameService interface {
 	ProcessServer(route string, body reflect.Value)
+	RegisterServer(gsid string, server *GameServer)
+	GetServerByGSID(gsid string) *GameServer
+	RemoveServerByGSID(gsid string)
+	GetServerSort() map[string]*GameServer
 }

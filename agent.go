@@ -23,6 +23,7 @@ package nano
 import (
 	"errors"
 	"fmt"
+	"github.com/jmesyan/nano/connector"
 	"github.com/jmesyan/nano/utils"
 	"net"
 	"reflect"
@@ -189,7 +190,7 @@ func (a *agent) Close() error {
 	}
 
 	if uid := a.session.UID(); uid > 0 {
-		ConnectorHandler.RemoveUser(int(uid))
+		connector.ConnectorHandler.RemoveUser(int(uid))
 	}
 	return a.conn.Close()
 }
