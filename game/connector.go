@@ -106,6 +106,9 @@ func (c *Connector) NID() string {
 func (c *Connector) Status() int32 {
 	return c.status
 }
+func (c *Connector) GetClient() *nats.Conn {
+	return c.client
+}
 
 func (c *Connector) Init() {
 	var err error

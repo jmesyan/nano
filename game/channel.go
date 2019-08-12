@@ -180,7 +180,7 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 	return nil
 }
 
-func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int, isretry bool) error {
+func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int32, isretry bool) error {
 	if gc.Status < ChannelCreated {
 		return errors.New(fmt.Sprintf("channel not really:%d", gc.Uid))
 	}

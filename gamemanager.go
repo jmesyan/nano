@@ -1,12 +1,14 @@
 package nano
 
 import (
+	"errors"
 	"fmt"
 	"github.com/jmesyan/nano/game"
 	"github.com/jmesyan/nano/utils"
 	"net"
 	"reflect"
 	"sort"
+	"time"
 )
 
 var (
@@ -15,8 +17,9 @@ var (
 )
 
 type GameManager struct {
-	listenaddrs string
-	Serversort  map[string]*game.GameServer
+	listenaddrs      string
+	Serversort       map[string]*game.GameServer
+	enterMaxConnects int
 }
 
 type GameManagerOpts func(g *GameManager)
@@ -29,8 +32,9 @@ func WithGameManagerAddrs(addrs string) GameManagerOpts {
 
 func NewGameManager(opts ...GameManagerOpts) *GameManager {
 	g := &GameManager{
-		listenaddrs: DefautListenGame,
-		Serversort:  make(map[string]*game.GameServer),
+		listenaddrs:      DefautListenGame,
+		Serversort:       make(map[string]*game.GameServer),
+		enterMaxConnects: 0,
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -126,6 +130,90 @@ func (g *GameManager) GetCenterServerByBalance(ngid int) *game.GameServer {
 		return g.Serversort[gsid]
 	}
 	return nil
+}
+
+func (g *GameManager) ReconnectToGame(uid int, connectServerdata *game.ServerData) (*game.ServerData, error) {
+	var serverdata *game.ServerData
+	channel := game.GetChannel(uid)
+	if channel != nil {
+		serverdata = channel.SrvData
+		logger.Println("reconnectToGame logoutgame:", uid)
+		err := channel.LogoutGame(true)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if serverdata != nil {
+		if connectServerdata != nil && serverdata.Gsidtid == connectServerdata.Gsidtid {
+			return nil, errors.New(fmt.Sprintf("same user request to game:%#v", connectServerdata))
+		}
+		sess, err := game.ConnectorHandler.Member(uid)
+		if err != nil {
+			return nil, err
+		}
+		err = sess.Push("reconnect", serverdata)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(result *game.ControlUserEnterroom), isretry bool) error {
+	isreconnect, err := g.ReconnectToGame(uid, serverdata)
+	if err != nil {
+		return err
+	}
+	if isreconnect != nil {
+		serverdata = isreconnect
+	}
+	server := g.GetServerByGSID(serverdata.Gsid)
+	if server == nil {
+		return errors.New(fmt.Sprintf("serverNotOnline,uid:%d, sid:%s", uid, serverdata.Gsid))
+	}
+	channel := game.NewGameChannel(uid, game.ConnectorHandler.NID(), game.ConnectorHandler.GetClient(), g)
+	t := time.Now()
+	callback := func(data *game.ControlUserEnterroom) {
+		logger.Printf("进桌返回,uid:%d, data:%#v", uid, data)
+		dur := time.Now().Sub(t).Nanoseconds()
+		if dur > 100 {
+			logger.Printf("%d 登录 %s 消耗: %dms \n", uid, serverdata.Gsidtid, dur)
+		}
+		rel := data.GetRel()
+		if rel == 0 {
+			g.enterMaxConnects = 0
+			if cb != nil {
+				cb(data)
+			}
+		} else {
+			if rel == game.ControlUserEnterroom_ENTER_WRONG_RELOAD {
+				err := channel.LogoutGame(true)
+				fmt.Println(err)
+			}
+			err := channel.Destory(true)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			if rel == game.ControlUserEnterroom_ENTER_WRONG_INGAME {
+				if g.enterMaxConnects <= 10 {
+					g.enterMaxConnects++
+					time.AfterFunc(100*time.Nanosecond, func() {
+						err = g.EnterToGame(uid, serverdata, cb, isretry)
+						if err != nil {
+							fmt.Println(err)
+						}
+					})
+					return
+				}
+			}
+			if cb != nil {
+				cb(data)
+			}
+		}
+	}
+	err = channel.LoginGame(serverdata, game.TickHandler.GetTick(reflect.ValueOf(callback)), isretry)
+	return err
 }
 
 func init() {
