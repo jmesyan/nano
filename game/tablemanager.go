@@ -52,10 +52,10 @@ func (tm *RandomAssignGameTable) registerTables(gsid string, tables []*ControlRo
 						allcodes = append(allcodes[:index], allcodes[index+1:]...)
 					}
 				}
-				tm.addUserToTable(gsidtid, int(ownid))
+				tm.AddUserToTable(gsidtid, int(ownid))
 				if len(uids) > 0 {
 					for _, uid := range uids {
-						tm.addUserToTable(gsidtid, int(uid))
+						tm.AddUserToTable(gsidtid, int(uid))
 						//在线进行重连
 					}
 				}
@@ -71,7 +71,7 @@ func (tm *RandomAssignGameTable) registerTables(gsid string, tables []*ControlRo
 
 }
 
-func (tm *RandomAssignGameTable) addUserToTable(gsidtid string, uid int) {
+func (tm *RandomAssignGameTable) AddUserToTable(gsidtid string, uid int) {
 	if len(gsidtid) == 0 || uid < 1 {
 		return
 	}

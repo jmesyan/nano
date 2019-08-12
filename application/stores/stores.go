@@ -21,10 +21,10 @@ type StoreSys struct {
 }
 
 type StoreGoldsDistributeTable struct {
-	Gid        int32
-	Rtype      int32
-	Ridx       int32
-	Tid        int32
+	Gid        int
+	Rtype      int
+	Ridx       int
+	Tid        int
 	Users      []int32
 	Multiples  []int32
 	Bonusround int32
