@@ -106,6 +106,23 @@ func (g *GameManager) RemoveServerByGSID(gsid string) {
 	delete(g.Serversort, gsid)
 }
 
+func (g *GameManager) GetCenterServers(ngid int, ngc func(s *game.GameServer) bool) map[string]*game.GameServer {
+	config, ok := gds.Configs[ngid]
+	if !ok {
+		return nil
+	}
+	gcid := config.Censerver
+	gsids := make(map[string]*game.GameServer)
+	for gsid, server := range g.Serversort {
+		gid, rtype, _ := game.GetGameParamsByGsid(gsid)
+		grid := game.GetGrid(gid, rtype)
+		if grid == gcid && !game.IsServerMaintence(gsid) && ngc(server) {
+			gsids[gsid] = server
+		}
+	}
+	return gsids
+}
+
 func (g *GameManager) GetCenterServerByBalance(ngid int) *game.GameServer {
 	config, ok := gds.Configs[ngid]
 	if !ok {
