@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/jmesyan/nano/connector"
+	"github.com/jmesyan/nano/connectors"
 	"github.com/nats-io/nats.go"
 	"strings"
 	"sync"
@@ -134,7 +134,7 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) {
 			"body": base64.StdEncoding.EncodeToString(msg),
 		}
 		if gc.IsPeer() {
-			s, err := connector.ConnectorHandler.Member(gc.Uid)
+			s, err := connectors.ConnectorHandler.Member(gc.Uid)
 			if err != nil {
 				fmt.Println(err)
 			} else {
