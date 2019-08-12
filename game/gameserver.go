@@ -26,21 +26,22 @@ var (
 )
 
 type GameServer struct {
-	conn      net.Conn
-	node      *nodes.Node
-	natsaddrs string
-	status    int32
-	client    *nats.Conn
-	msgch     chan *nats.Msg
-	shut      chan struct{}
-	tablesort map[int32]*GameTable
-	Gsid      string
-	Gid       int
-	Rtype     int
-	Ridx      int
-	StartTime int
-	Service   GameService
-	c2sTopic  string
+	conn       net.Conn
+	node       *nodes.Node
+	natsaddrs  string
+	status     int32
+	client     *nats.Conn
+	msgch      chan *nats.Msg
+	shut       chan struct{}
+	tablesort  map[int32]*GameTable
+	Gsid       string
+	Gid        int
+	Rtype      int
+	Ridx       int
+	StartTime  int
+	Service    GameService
+	c2sTopic   string
+	c2sDestory string
 }
 
 type GameServerOpts func(g *GameServer)
@@ -79,7 +80,10 @@ func (g *GameServer) processPacket(p *Packet) error {
 	if cid > 0 {
 		cn := GetChannel(cid)
 		if cn != nil {
-			cn.S2C(heart, cmd, data) //消息转发到客户端
+			err := cn.S2C(heart, cmd, data) //消息转发到客户端
+			if err != nil {
+				fmt.Println(err)
+			}
 		} else {
 			fmt.Printf("can't find the channel:%#v", p)
 		}
@@ -370,6 +374,7 @@ func (g *GameServer) InitNats() {
 	}
 	//设置topic
 	g.c2sTopic = fmt.Sprintf("%s.c2s", g.NID())
+	g.c2sDestory = fmt.Sprintf("%s.channel.destory", g.NID())
 	//监听消息
 	go g.watcher()
 }
@@ -392,5 +397,20 @@ func (g *GameServer) HandleMsg(msg *nats.Msg) {
 	switch msg.Subject {
 	case g.c2sTopic:
 		g.SendString(string(msg.Data))
+	case g.c2sDestory:
+		payload := make(map[string]interface{})
+		err := utils.Serializer.Unmarshal(msg.Data, payload)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		uid := int(payload["uid"].(float64))
+		cn := GetChannel(uid)
+		if cn != nil {
+			err = cn.Destory(true)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 	}
 }

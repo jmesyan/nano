@@ -22,7 +22,7 @@ package nano
 
 import (
 	"fmt"
-	"github.com/jmesyan/nano/connectors"
+	"github.com/jmesyan/nano/game"
 	"github.com/jmesyan/nano/serialize"
 	"github.com/jmesyan/nano/utils"
 	"net"
@@ -42,8 +42,8 @@ var (
 )
 
 func init() {
-	connectors.ConnectorHandler = connectors.NewConnector()
-	Register(connectors.ConnectorHandler)
+	game.ConnectorHandler = game.NewConnector()
+	Register(game.ConnectorHandler)
 }
 
 func listen(addr string, isWs bool, opts ...Option) {

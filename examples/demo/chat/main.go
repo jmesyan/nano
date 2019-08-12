@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/jmesyan/nano/connectors"
+	"github.com/jmesyan/nano/game"
 	"github.com/jmesyan/nano/utils"
 	"log"
 	"net/http"
@@ -100,7 +100,7 @@ func (mgr *RoomManager) AfterInit() {
 }
 
 var (
-	assist = connectors.ConnectorHandler
+	assist = game.ConnectorHandler
 )
 
 // Join room

@@ -487,7 +487,7 @@ func GetUserAchievement(uid int) *structure.UserAchievement {
 		if err != nil {
 			logger.Println(err)
 		}
-		return nil
+		return info
 	}
 	return info
 }

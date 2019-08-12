@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package connectors
+package game
 
 import (
 	"errors"
@@ -29,15 +29,12 @@ import (
 	"github.com/jmesyan/nano/users"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
-	"log"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 var (
-	logger           = log.New(os.Stderr, "[connector]", log.LstdFlags|log.Llongfile)
 	envdebug         = true
 	ConnectorHandler *Connector
 )
@@ -63,17 +60,18 @@ type SessionFilter func(*session.Session) bool
 // Connector represents a session connector which used to manage a number of
 // sessions, data send to the connector will send to all session in it.
 type Connector struct {
-	node      *nodes.Node
-	mu        sync.RWMutex
-	status    int32                      // channel current status
-	sessions  map[int64]*session.Session // session id map to session instance
-	natsaddrs string
-	client    *nats.Conn
-	msgch     chan *nats.Msg
-	shut      chan struct{}
-	kickTopic string
-	pushTopic string
-	s2cTopic  string
+	node       *nodes.Node
+	mu         sync.RWMutex
+	status     int32                      // channel current status
+	sessions   map[int64]*session.Session // session id map to session instance
+	natsaddrs  string
+	client     *nats.Conn
+	msgch      chan *nats.Msg
+	shut       chan struct{}
+	kickTopic  string
+	pushTopic  string
+	s2cTopic   string
+	s2cDestory string
 }
 
 type ConnectorOpts func(g *Connector)
@@ -139,6 +137,7 @@ func (c *Connector) Init() {
 	c.kickTopic = utils.GenerateTopic(c.node.Nid, "kick")
 	c.pushTopic = utils.GenerateTopic(c.node.Nid, "push")
 	c.s2cTopic = utils.GenerateTopic(c.node.Nid, "s2c")
+	c.s2cDestory = utils.GenerateTopic(c.node.Nid, "channel.destory")
 }
 
 func (c *Connector) AfterInit() {
@@ -258,6 +257,21 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		}
 		delete(payload, "uid")
 		sess.Push("game", payload)
+	case c.s2cDestory:
+		payload := make(map[string]interface{})
+		err := utils.Serializer.Unmarshal(msg.Data, payload)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		uid := int(payload["uid"].(float64))
+		cn := GetChannel(uid)
+		if cn != nil {
+			err = cn.Destory(true)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 	}
 
 }
