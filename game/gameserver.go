@@ -119,8 +119,8 @@ func (g *GameServer) processPacket(p *Packet) error {
 		if err != nil {
 			return err
 		} else {
-			fmt.Printf("server start: Gid:%d, the Rtype is:%d, the Ridx is:%d\n", register.GetGid(), register.GetRidx(), register.GetRtype())
-			g.Init(register.GetGid(), register.GetRidx(), register.GetRtype())
+			fmt.Printf("server start: Gid:%d, the Rtype is:%d, the Ridx is:%d\n", register.GetGid(), register.GetRtype(), register.GetRidx())
+			g.Init(register.GetGid(), register.GetRtype(), register.GetRidx())
 		}
 	case CMD.OGID_CONTROL_TABLES | CMD.ACK:
 		//注册桌子
