@@ -129,22 +129,24 @@ func (g *GameManager) GetCenterServerByBalance(ngid int) *game.GameServer {
 		return nil
 	}
 	gcid := config.Censerver
-	gsids := make(map[int]string)
+	gsids := make(map[string]int)
 	for gsid, _ := range g.Serversort {
 		gid, rtype, _ := game.GetGameParamsByGsid(gsid)
 		grid := game.GetGrid(gid, rtype)
 		if grid == gcid && !game.IsServerMaintence(gsid) {
-			gsids[gds.Gcsu[gsid]] = gsid
+			gsids[gsid] = gds.Gcsu[gsid]
 		}
 	}
 	if len(gsids) > 0 {
-		gsorts := make([]int, len(gsids))
-		for k, _ := range gsids {
-			gsorts = append(gsorts, k)
+		var i, s, n = 0, make([]string, len(gsids)), make([]int, len(gsids))
+		for gsid, num := range gsids {
+			s[i], n[i] = gsid, num
+			i += 1
 		}
-		sort.Ints(gsorts)
-		gsid := gsids[gsorts[0]]
-		return g.Serversort[gsid]
+		sort.Slice(s, func(i, j int) bool {
+			return n[i] < n[j]
+		})
+		return g.Serversort[s[0]]
 	}
 	return nil
 }
