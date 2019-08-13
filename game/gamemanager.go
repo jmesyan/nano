@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/jmesyan/nano/utils"
 	"log"
@@ -27,7 +28,8 @@ type cmd struct {
 	OGID_CONTROL_HEART_BEAT      int32
 	OGID_CONTROL_USER_SIGN       int32
 	OGID_CONTROL_DISTRIBUTE_USER int32
-	OGID_ROOMSVR_ENTERROOM int32
+	OGID_ROOMSVR_ENTERROOM       int32
+	GLID_GAMEITEM_KICKTOHALL     int32
 }
 
 func NewCmd() *cmd {
@@ -35,12 +37,13 @@ func NewCmd() *cmd {
 		REQ:                          0,
 		ACK:                          134217728,
 		OGID_MSGBASE_CONTROLBASE:     0x2500,
-		OGID_CONTROL_REGIS:           9472, //注册服务器
-		OGID_CONTROL_TABLES:          9476, //注册桌子
-		OGID_CONTROL_HEART_BEAT:      9485, //心跳
-		OGID_CONTROL_USER_SIGN:       9622, //金币场进入游戏
-		OGID_CONTROL_DISTRIBUTE_USER: 9623, //金币场玩家分桌
-		OGID_ROOMSVR_ENTERROOM:12801,//进入房间
+		OGID_CONTROL_REGIS:           9472,  //注册服务器
+		OGID_CONTROL_TABLES:          9476,  //注册桌子
+		OGID_CONTROL_HEART_BEAT:      9485,  //心跳
+		OGID_CONTROL_USER_SIGN:       9622,  //金币场进入游戏
+		OGID_CONTROL_DISTRIBUTE_USER: 9623,  //金币场玩家分桌
+		OGID_ROOMSVR_ENTERROOM:       12801, //进入房间
+		GLID_GAMEITEM_KICKTOHALL:     12372, //踢回大厅
 	}
 }
 
@@ -65,6 +68,16 @@ func IsServerMaintence(gsid string) bool {
 
 func RemoveServerManintence(gsid string) {
 	delete(sys.MAINTEN_SERVERS, fmt.Sprintf("SYS_MAINTENANCE_%s", gsid))
+}
+
+func MakeGameMsg(cmd int, msg map[string]interface{}) (string, error) {
+	cmds := fmt.Sprintf("000000000%d", cmd)
+	cmds = cmds[len(cmds)-9 : 0]
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return "", err
+	}
+	return cmds + string(data), nil
 }
 
 type GameService interface {
