@@ -90,7 +90,7 @@ func (s *Service) suitableHandlerMethods(typ reflect.Type) (map[string]*Handler,
 			if s.Options.nameFunc != nil {
 				mn = s.Options.nameFunc(mn)
 			}
-			srvMethods[mn] = &Handler{Method: method, Type: mt.In(0)}
+			srvMethods[mn] = &Handler{Method: method, Type: mt.In(1)}
 		}
 	}
 	return methods, srvMethods

@@ -86,7 +86,7 @@ func isSrvHandleMethod(name string, method reflect.Method) bool {
 	}
 
 	// Method needs three ins: receiver, *Session, []byte or pointer.
-	if mt.NumIn() != 1 {
+	if mt.NumIn() != 2 {
 		return false
 	}
 
@@ -95,7 +95,7 @@ func isSrvHandleMethod(name string, method reflect.Method) bool {
 		return false
 	}
 
-	if t1 := mt.In(0); t1.Kind() != reflect.Ptr {
+	if t1 := mt.In(1); t1.Kind() != reflect.Ptr {
 		return false
 	}
 
