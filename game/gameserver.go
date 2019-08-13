@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/jmesyan/nano/application/models"
 	"github.com/jmesyan/nano/application/stores"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
@@ -99,7 +100,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 			} else {
 				TickHandler.ExecTick(tick, reflect.ValueOf(body))
 			}
-		case CMD.OGID_ROOMSVR_ENTERROOM|CMD.ACK:
+		case CMD.OGID_ROOMSVR_ENTERROOM | CMD.ACK:
 			body := &ControlUserEnterroom{}
 			err := proto.Unmarshal(data, body)
 			if err != nil {
@@ -162,6 +163,26 @@ func (g *GameServer) processPacket(p *Packet) error {
 			return err
 		} else {
 			g.Service.ProcessServer("hall.user.goldEnterRoom", reflect.ValueOf(body))
+		}
+	case CMD.OGID_GAME_MSG | CMD.ACK:
+		body := &ControlGameMsg{}
+		logger.Printf("control_game_msg, gsid:%s, body:%#v", g.Gsid, body)
+		uid, mtype, mtid, mpos := body.GetUid(), body.GetType(), body.GetTid(), body.GetPos()
+		if mtype == 0 { //玩家进入
+			table := g.getTable(mtid)
+			if table == nil {
+				table = g.addTable(&ControlRoomUsersTableInfo{
+					Tid: body.Tid,
+				})
+			}
+			table.addPlayer(uid)
+			models.AddUserOnline(map[string]interface{}{"userid": uid, "gid": g.Gid, "rtype": g.Rtype, "ridx": g.Ridx, "tid": mtid, "pos": mpos})
+		} else if mtype == 2 { //离开房间
+			table := g.getTable(mtid)
+			if table != nil {
+				table.RemovePlayer(uid)
+				models.RemoveUserOnline(int(uid))
+			}
 		}
 	}
 	return nil
@@ -421,4 +442,18 @@ func (g *GameServer) HandleMsg(msg *nats.Msg) {
 			}
 		}
 	}
+}
+
+func (g *GameServer) GetUserCount() int {
+	users := 0
+	for _, table := range g.tablesort {
+		if table != nil {
+			users += table.GetPlayerCount()
+		}
+	}
+	return users
+}
+
+func (g *GameServer) GetTableCount() int {
+	return len(g.tablesort)
 }

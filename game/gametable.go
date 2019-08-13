@@ -3,11 +3,12 @@ package game
 import "fmt"
 
 type GameTable struct {
-	gsid       string
-	tableid    int32
-	code       int
-	gsidtid    string
-	gameserver *GameServer
+	gsid        string
+	tableid     int32
+	code        int
+	gsidtid     string
+	player_sort map[int]int
+	gameserver  *GameServer
 }
 
 func NewGameTable() *GameTable {
@@ -35,6 +36,31 @@ func (gt *GameTable) Init(gsid string, table *ControlRoomUsersTableInfo) {
 	}
 }
 
-func (gt *GameTable) addPlayer(uid int32) {
+func (gt *GameTable) addPlayer(nuid int32) {
+	uid := int(nuid)
+	gt.player_sort[uid] = uid
+	TableManager.AddUserToTable(gt.gsidtid, uid)
+	s, err := ConnectorHandler.Member(uid)
+	if err == nil {
+		s.Set("gsid", gt.gsid)
+		s.Set("tableid", gt.tableid)
+	} else {
+		fmt.Println(err)
+	}
+}
 
+func (gt *GameTable) RemovePlayer(nuid int32) {
+	uid := int(nuid)
+	delete(gt.player_sort, uid)
+	TableManager.RemoveTableUser(gt.gsidtid, uid)
+	s, err := ConnectorHandler.Member(uid)
+	if err == nil {
+		s.Remove("gsid")
+		s.Remove("tableid")
+	} else {
+		fmt.Println(err)
+	}
+}
+func (gt *GameTable) GetPlayerCount() int {
+	return len(gt.player_sort)
 }

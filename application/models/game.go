@@ -163,5 +163,19 @@ func GetOnlineNum(date int, start int, end int) []structure.LogOnlineNum {
 		return nil
 	}
 	return data
+}
 
+func AddUserOnline(data map[string]interface{}) {
+	nowtime := Time()
+	data["login_time"] = nowtime
+	data["update_time"] = nowtime
+	CoverUpdate("yly_online", []string{"userid"}, data)
+}
+
+func RemoveUserOnline(uid int) {
+	nowtime := Time()
+	data := map[string]interface{}{"gid": 0, "rtype": 0, "ridx": 0, "tid": 0, "pos": 0}
+	data["userid"] = uid
+	data["update_time"] = nowtime
+	CoverUpdate("yly_online", []string{"userid"}, data)
 }

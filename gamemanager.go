@@ -233,6 +233,21 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 	return err
 }
 
+func (g *GameManager) GetGameListState() map[string]interface{} {
+	list := make(map[string]interface{})
+	for gsid, server := range g.Serversort {
+		if server != nil {
+			use, nouse := game.TableManager.GetUseTableCount(gsid)
+			list[gsid] = map[string]interface{}{
+				"users":  server.GetUserCount(),
+				"tables": server.GetTableCount(),
+				"state":  map[string]interface{}{"use": use, "nouse": nouse},
+			}
+		}
+	}
+	return list
+}
+
 func init() {
 	GameManagerHander = NewGameManager()
 	Register(GameManagerHander)

@@ -5,6 +5,7 @@ import (
 	"github.com/jmesyan/nano/application/cache"
 	"github.com/jmesyan/nano/application/stores"
 	"github.com/jmesyan/nano/utils"
+	"strings"
 )
 
 var (
@@ -78,6 +79,39 @@ func (tm *RandomAssignGameTable) AddUserToTable(gsidtid string, uid int) {
 	if !utils.InArray(uid, p2p.Mj.Gsidtid[gsidtid]) {
 		p2p.Mj.Gsidtid[gsidtid] = append(p2p.Mj.Gsidtid[gsidtid], uid)
 	}
+}
+
+func (tm *RandomAssignGameTable) RemoveTableUser(gsidtid string, uid int) {
+	if len(gsidtid) == 0 || uid < 1 {
+		logger.Printf("RemoveTableUser 参数错误,gsidtid:%s, uid:%d", gsidtid, uid)
+		return
+	}
+	if len(p2p.Mj.Gsidtid[gsidtid]) == 0 {
+		return
+	}
+	gsidtids := p2p.Mj.Gsidtid[gsidtid]
+	for index, nuid := range gsidtids {
+		if nuid == uid {
+			p2p.Mj.Gsidtid[gsidtid] = append(p2p.Mj.Gsidtid[gsidtid][:index], p2p.Mj.Gsidtid[gsidtid][index+1:]...)
+		}
+	}
+}
+
+func (tm *RandomAssignGameTable) GetUseTableCount(gsid string) (int, int) {
+	gid, _, _ := GetGameParamsByGsid(gsid)
+	gsid = fmt.Sprintf("%d_", gsid)
+	use, nouse := 0, 0
+	for _, gsidtid := range p2p.Mj.Use {
+		if strings.Contains(gsidtid, gsid) {
+			use++
+		}
+	}
+	for _, gsidtid := range p2p.Mj.Nouse[gid] {
+		if strings.Contains(gsidtid, gsid) {
+			nouse++
+		}
+	}
+	return use, nouse
 }
 
 func init() {

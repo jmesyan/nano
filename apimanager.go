@@ -2,7 +2,6 @@ package nano
 
 import (
 	"fmt"
-	"github.com/jmesyan/nano/apiserver"
 	"github.com/jmesyan/nano/application/stores"
 	"net"
 )
@@ -57,7 +56,7 @@ func (am *ApiManager) watcher() {
 		}
 
 		// start a new goroutine to handle the new connection
-		apiserver.NewApiServer(conn)
+		NewApiServer(conn)
 	}
 }
 

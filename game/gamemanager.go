@@ -30,6 +30,7 @@ type cmd struct {
 	OGID_CONTROL_DISTRIBUTE_USER int32
 	OGID_ROOMSVR_ENTERROOM       int32
 	GLID_GAMEITEM_KICKTOHALL     int32
+	OGID_GAME_MSG                int32
 }
 
 func NewCmd() *cmd {
@@ -44,6 +45,7 @@ func NewCmd() *cmd {
 		OGID_CONTROL_DISTRIBUTE_USER: 9623,  //金币场玩家分桌
 		OGID_ROOMSVR_ENTERROOM:       12801, //进入房间
 		GLID_GAMEITEM_KICKTOHALL:     12372, //踢回大厅
+		OGID_GAME_MSG:                12315, //玩家进出游戏
 	}
 }
 
@@ -70,7 +72,7 @@ func RemoveServerManintence(gsid string) {
 	delete(sys.MAINTEN_SERVERS, fmt.Sprintf("SYS_MAINTENANCE_%s", gsid))
 }
 
-func MakeGameMsg(cmd int, msg map[string]interface{}) (string, error) {
+func MakeGameMsg(cmd int32, msg map[string]interface{}) (string, error) {
 	cmds := fmt.Sprintf("000000000%d", cmd)
 	cmds = cmds[len(cmds)-9 : 0]
 	data, err := json.Marshal(msg)

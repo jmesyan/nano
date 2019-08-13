@@ -3,21 +3,21 @@ package game
 import "fmt"
 
 type ServerData struct {
-	Gid        int
-	Rtype      int
-	Ridx       int
-	Tid        int
-	Gsid       string
-	Gsidtid    string
-	State      int
-	Initscore  int
-	Motor      int
-	Lid        int
-	Code       int
-	Quick      int
-	QuickSit   int
-	Scorescale float64
-	Gobj       map[string]interface{}
+	Gid        int                    `json:"gid"`
+	Rtype      int                    `json:"rtype"`
+	Ridx       int                    `json:"ridx"`
+	Tid        int                    `json:"tid"`
+	Gsid       string                 `json:"gsid"`
+	Gsidtid    string                 `json:"gsidtid"`
+	State      int                    `json:"state"`
+	Initscore  int                    `json:"initscore"`
+	Motor      int                    `json:"motor"`
+	Lid        int                    `json:"lid"`
+	Code       int                    `json:"code"`
+	Quick      int                    `json:"quick"`
+	QuickSit   int                    `json:"quicksit"`
+	Scorescale float64                `json:"scorescale"`
+	Gobj       map[string]interface{} `json:"gobj"`
 }
 
 type ServerDataOpt func(sd *ServerData)

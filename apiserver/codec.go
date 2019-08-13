@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jmesyan/nano"
 	"github.com/jmesyan/nano/utils"
 )
 
@@ -59,7 +60,7 @@ func (c *Decoder) Decode(data []byte) (*Packet, error) {
 	}
 	strSign := strData[0:32]
 	strJson := strData[32:]
-	logger.Println(">> api:", strJson)
+	nano.logger.Println(">> api:", strJson)
 	sign := utils.Md5(fmt.Sprintf("go-realbull-api%s", strJson))
 	if sign != strSign {
 		return nil, errors.New("the sign is error")
