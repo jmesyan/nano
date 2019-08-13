@@ -64,8 +64,8 @@ func (c *Decoder) Decode(data []byte) (*Packet, error) {
 	if sign != strSign {
 		return nil, errors.New("the sign is error")
 	}
-	obj := make(map[string]interface{})
-	err = json.Unmarshal([]byte(strJson), obj)
+	var obj map[string]interface{}
+	err = json.Unmarshal([]byte(strJson), &obj)
 	if err != nil {
 		return nil, err
 	}

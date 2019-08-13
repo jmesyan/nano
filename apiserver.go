@@ -64,7 +64,7 @@ func (as *ApiServer) processPacket(p *apiserver.Packet) error {
 	}
 	switch cmd {
 	case "SYS_MAINTENANCE":
-		mtype, mt := obj["type"].(int), obj["t"].(int64)
+		mtype, mt := int(obj["type"].(float64)), int64(obj["t"].(float64))
 		if mtype == 1 {
 			sys.SYS_MAINTENANCE = true
 			sys.MAINTENANCE_TIME = mt
@@ -94,9 +94,14 @@ func (as *ApiServer) SendObj(data map[string]interface{}) {
 			fmt.Println(err)
 		} else {
 			_, err = as.conn.Write(msg)
-			fmt.Println(err)
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		}
 		_, err = as.conn.Write(as.ReadEndStr)
-		fmt.Println(err)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
