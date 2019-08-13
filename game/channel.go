@@ -113,11 +113,12 @@ func (gc *GameChannel) IsPeer() bool {
 	return gc.ClientAddr == gc.GameAddr
 }
 
-func (gc *GameChannel) C2S(cmd, msg string) error {
+func (gc *GameChannel) C2S(msg string, args ...string) error {
+	cmd := "00"
+	if len(args) > 0 {
+		cmd = args[0]
+	}
 	if gc.Status == ChannelCreated {
-		if len(cmd) == 0 {
-			cmd = "00"
-		}
 		data := fmt.Sprintf("04AAAA%s%s%s", gc.Id, cmd, msg)
 		if gc.IsPeer() {
 			server := gc.service.GetServerByGSID(gc.Gsid)
@@ -235,7 +236,7 @@ func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int32, isretry boo
 	gobjstr := string(gobjbyte)
 	msg := fmt.Sprintf("%d|%d|%s|%s|%s|%d|%d|%d|%s|%d|%d|%d|%d|%d|%d|%s", tick, gc.Uid, username, name, player.Gender, usertype,
 		tid, bfrom, loginip, quick, quicksit, firstin, outgolds, intime, useprop, gobjstr)
-	err = gc.C2S("01", msg)
+	err = gc.C2S(msg, "01")
 	if err != nil {
 		return err
 	}
@@ -246,7 +247,7 @@ func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int32, isretry boo
 }
 
 func (gc *GameChannel) LogoutGame(destory bool) error {
-	err := gc.C2S("02", "")
+	err := gc.C2S("", "02")
 	if err != nil {
 		return err
 	}
