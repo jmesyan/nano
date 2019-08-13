@@ -133,6 +133,9 @@ func (mgr *RoomManager) Message(s *session.Session, msg *UserMessage) error {
 	//room := s.Value(roomIDKey).(*Room)
 	return nil
 }
+func (mgr *RoomManager) GoldEnterRoom(body *game.ControlDistributeUsers) {
+
+}
 
 func main() {
 	// override default serializer

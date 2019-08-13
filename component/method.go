@@ -86,7 +86,7 @@ func isSrvHandleMethod(name string, method reflect.Method) bool {
 	}
 
 	// Method needs three ins: receiver, *Session, []byte or pointer.
-	if mt.NumIn() <= 2 {
+	if mt.NumIn() > 2 {
 		return false
 	}
 
