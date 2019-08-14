@@ -172,6 +172,10 @@ func (g *GameServer) processPacket(p *Packet) error {
 		}
 	case CMD.OGID_GAME_MSG | CMD.ACK:
 		body := &ControlGameMsg{}
+		err := proto.Unmarshal(data, body)
+		if err != nil {
+			return err
+		}
 		logger.Printf("control_game_msg, gsid:%s, body:%#v", g.Gsid, body)
 		uid, mtype, mtid, mpos := body.GetUid(), body.GetType(), body.GetTid(), body.GetPos()
 		if mtype == 0 { //玩家进入
