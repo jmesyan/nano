@@ -72,6 +72,11 @@ func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpts) *
 	go g.handleConn()
 	return g
 }
+
+func (g *GameServer) GetNode() *nodes.Node {
+	return g.node
+}
+
 func (g *GameServer) processPacket(p *Packet) error {
 	fmt.Printf("processPacket:%#v\n", p)
 	cid := int(p.Cid)
@@ -385,7 +390,7 @@ func (g *GameServer) Init(Gid, Rtype, Ridx int32) {
 func (g *GameServer) InitNats() {
 	var err error
 	nid := utils.GenerateNodeId(nodes.NodeGameServer, g.Gsid)
-	n := nodes.NewNode("GameServer", nid, nodes.NodeGameServer)
+	n := nodes.NewNode("GameServer", nid, nodes.NodeGameServer, nodes.WithNodeAddress(utils.GenerateLocalAddr()))
 	dcm.RegisterNode(nid, n)
 	g.node = n
 	g.client, err = nats.Connect(g.natsaddrs)

@@ -201,6 +201,7 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 		rel := data.GetRel()
 		if rel == 0 {
 			g.enterMaxConnects = 0
+			channel.SetGameNid(server.NID(), server.GetNode().Address)
 			if cb != nil {
 				cb(data)
 			}
