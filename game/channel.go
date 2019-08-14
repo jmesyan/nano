@@ -182,9 +182,6 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 }
 
 func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int32, isretry bool) error {
-	if gc.Status < ChannelCreated {
-		return errors.New(fmt.Sprintf("channel not really:%d", gc.Uid))
-	}
 	gc.SrvData = serverdata
 	player := cache.CacheManager.GetUser(gc.Uid)
 	achieve := models.GetUserAchievement(gc.Uid)
