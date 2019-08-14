@@ -12,6 +12,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"net"
 	"reflect"
+	"sort"
 	"time"
 )
 
@@ -153,7 +154,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 		if err != nil {
 			return err
 		} else {
-			fmt.Printf("the heart info is :%d\n", heart.GetNowstamp())
+			fmt.Printf("the heart info is: gsid:%s, timestamp :%d\n", g.Gsid, heart.GetNowstamp())
 			g.sendHeartBeat(heart.GetNowstamp())
 		}
 	case CMD.OGID_CONTROL_DISTRIBUTE_USER | CMD.ACK:
@@ -203,6 +204,7 @@ func (g *GameServer) SendString(format string, args ...interface{}) bool {
 		return false
 	}
 	if g.conn != nil {
+		str += "\x00"
 		_, err := g.conn.Write([]byte(str))
 		if err != nil {
 			fmt.Println(err)
@@ -241,13 +243,17 @@ func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
 				for mtid, _ := range server.tablesort {
 					mtids = append(mtids, mtid)
 				}
+				sort.Slice(mtids, func(i, j int) bool {
+					return mtids[i] < mtids[j]
+				})
 				data, err := json.Marshal(mtids)
 				if err != nil {
 					logger.Println(err)
 					continue
 				}
 				msg := string(data)
-				server.N2S(Gid, Rtype, Ridx, "01", msg)
+				logger.Println("gold initTables2:", Gid, Rtype, Ridx, "01", msg)
+				g.N2S(Gid, Rtype, Ridx, "01", msg)
 			}
 		}
 	}
@@ -309,6 +315,7 @@ func (g *GameServer) N2S(Gid, Rtype, Ridx int, cmd, msg string) string {
 	}
 	mGid, mRtype, mRidx := g.formatGsid(Gid), g.formatGsid(Rtype), g.formatGsid(Ridx)
 	data := fmt.Sprintf("04AAAA%s%s%s%s%s", mGid, cmd, mRtype, mRidx, msg)
+	logger.Println(data)
 	g.SendString(data)
 	return data
 }
