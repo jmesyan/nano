@@ -13,11 +13,12 @@ type GameTable struct {
 
 func NewGameTable() *GameTable {
 	gt := &GameTable{
-		gsid:       "",
-		tableid:    0,
-		code:       0,
-		gsidtid:    "",
-		gameserver: nil,
+		gsid:        "",
+		tableid:     0,
+		code:        0,
+		gsidtid:     "",
+		gameserver:  nil,
+		player_sort: make(map[int]int),
 	}
 	return gt
 }
