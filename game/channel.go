@@ -15,7 +15,7 @@ import (
 
 var (
 	channels = make(map[int]*GameChannel)
-	chanelmu sync.Locker
+	chanelmu sync.Mutex
 )
 
 type ChannelStatus int
