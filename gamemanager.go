@@ -191,6 +191,7 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 		return errors.New(fmt.Sprintf("serverNotOnline,uid:%d, sid:%s", uid, serverdata.Gsid))
 	}
 	channel := game.NewGameChannel(uid, game.ConnectorHandler.NID(), game.ConnectorHandler.GetClient(), g)
+	channel.SetGameNid(server.NID(), server.GetNode().Address)
 	t := time.Now()
 	callback := func(data *game.ControlUserEnterroom) {
 		logger.Printf("进桌返回,uid:%d, data:%#v", uid, data)
@@ -201,7 +202,6 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 		rel := data.GetRel()
 		if rel == 0 {
 			g.enterMaxConnects = 0
-			channel.SetGameNid(server.NID(), server.GetNode().Address)
 			if cb != nil {
 				cb(data)
 			}
