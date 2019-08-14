@@ -99,7 +99,7 @@ func (tm *RandomAssignGameTable) RemoveTableUser(gsidtid string, uid int) {
 
 func (tm *RandomAssignGameTable) GetUseTableCount(gsid string) (int, int) {
 	gid, _, _ := GetGameParamsByGsid(gsid)
-	gsid = fmt.Sprintf("%d_", gsid)
+	gsid = fmt.Sprintf("%s_", gsid)
 	use, nouse := 0, 0
 	for _, gsidtid := range p2p.Mj.Use {
 		if strings.Contains(gsidtid, gsid) {

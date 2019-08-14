@@ -81,7 +81,7 @@ func (g *GameManager) ProcessServer(route string, body reflect.Value) {
 		}
 	}()
 	if mt, ok := handler.srvhandlers[route]; ok {
-		mt.Method.Func.Call([]reflect.Value{body})
+		mt.Method.Func.Call([]reflect.Value{mt.Receiver, body})
 	} else {
 		fmt.Printf("the is no srv handler, route is:%s, body is:%#v", route, body)
 	}

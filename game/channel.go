@@ -172,11 +172,11 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 					return err
 				}
 			} else {
-				return errors.New(fmt.Sprintf("the s2c conn  is close, cmd:%s,msg:%s", cmd, msg))
+				return errors.New(fmt.Sprintf("the s2c conn  is close, cmd:%d,msg:%s", cmd, msg))
 			}
 		}
 	} else {
-		return errors.New(fmt.Sprintf("the s2c conn  is not really, cmd:%s,msg:%s", cmd, msg))
+		return errors.New(fmt.Sprintf("the s2c conn  is not really, cmd:%d,msg:%s", cmd, msg))
 	}
 	return nil
 }
