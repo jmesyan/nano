@@ -210,6 +210,7 @@ func (g *GameServer) SendString(format string, args ...interface{}) bool {
 	}
 	if g.conn != nil {
 		str += "\x00"
+		logger.Println("SendString:", str)
 		_, err := g.conn.Write([]byte(str))
 		if err != nil {
 			fmt.Println(err)
