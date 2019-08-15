@@ -233,6 +233,9 @@ func (gc *GameChannel) LoginGame(serverdata *ServerData, tick int32, isretry boo
 	if len(loginip) == 0 {
 		loginip = player.RegIp
 	}
+	if len(loginip) == 0 {
+		loginip = "0.0.0.0"
+	}
 	gobjstr := string(gobjbyte)
 	msg := fmt.Sprintf("%d|%d|%s|%s|%s|%d|%d|%d|%s|%d|%d|%d|%d|%d|%d|%s", tick, gc.Uid, username, name, player.Gender, usertype,
 		tid, bfrom, loginip, quick, quicksit, firstin, outgolds, intime, useprop, gobjstr)
