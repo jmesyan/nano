@@ -27,3 +27,24 @@ func TestTrimPrefix(t *testing.T) {
 	nkey := strings.TrimLeft(key, "dcm:")
 	fmt.Println(nkey)
 }
+
+func TestUserData(t *testing.T) {
+	uid, k, _ := 1000, "feng", map[string]interface{}{"sdsd": 12121}
+	//err := DCManager.StoreUserData(uid, k, v)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//err = DCManager.DelUserData(uid, k)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	var value map[string]interface{}
+	err := DCManager.GetUserData(uid, k, &value)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%#v", value)
+}

@@ -25,6 +25,12 @@ type DCM interface {
 	GetValue(k string) (*KvPair, error)
 	DelValue(k string) error
 	GetPrefixValue(k string) (*KvPairs, error)
+	StoreUserData(uid int, k string, v interface{}) error
+	GetUserData(uid int, k string, v interface{}) error
+	DelUserData(uid int, k string) error
+	StoreGameData(k string, v interface{}) error
+	GetGameData(k string, v interface{}) error
+	DelGameData(k string) error
 }
 
 var (

@@ -46,15 +46,15 @@ type GameServer struct {
 	c2sDestory string
 }
 
-type GameServerOpts func(g *GameServer)
+type GameServerOpt func(g *GameServer)
 
-func WithGameServerNatsaddrs(address string) GameServerOpts {
+func WithGameServerNatsaddrs(address string) GameServerOpt {
 	return func(g *GameServer) {
 		g.natsaddrs = address
 	}
 }
 
-func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpts) *GameServer {
+func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpt) *GameServer {
 	g := &GameServer{
 		conn:      conn,
 		tablesort: make(map[int32]*GameTable),
