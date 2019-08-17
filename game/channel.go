@@ -151,11 +151,11 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 			"body": base64.StdEncoding.EncodeToString(msg),
 		}
 		if gc.IsPeer() {
-			s, err := ConnectorHandler.Member(gc.Uid)
+			u, err := ConnectorHandler.Member(gc.Uid)
 			if err != nil {
 				return err
 			} else {
-				err := s.Push("game", data)
+				err := u.Sess.Push("game", data)
 				if err != nil {
 					return err
 				}

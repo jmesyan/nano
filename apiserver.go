@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/jmesyan/nano/apiserver"
 	"github.com/jmesyan/nano/game"
-	"github.com/jmesyan/nano/session"
 	"net"
 )
 
@@ -72,8 +71,8 @@ func (as *ApiServer) processPacket(p *apiserver.Packet) error {
 			sys.SYS_MAINTENANCE = false
 			sys.MAINTENANCE_TIME = 0
 		}
-		filter := func(s *session.Session) bool {
-			tableid := s.Int("tableid")
+		filter := func(u *game.GamePlayer) bool {
+			tableid := u.Sess.Int("tableid")
 			return tableid == 0
 		}
 		err := game.ConnectorHandler.Multicast("serverReboot", map[string]interface{}{"time": sys.MAINTENANCE_TIME}, filter)

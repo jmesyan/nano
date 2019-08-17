@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
-	"github.com/jmesyan/nano/session"
 	"github.com/jmesyan/nano/users"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
@@ -55,15 +54,15 @@ var (
 
 // SessionFilter represents a filter which was used to filter session when Multicast,
 // the session will receive the message while filter returns true.
-type SessionFilter func(*session.Session) bool
+type SessionFilter func(*GamePlayer) bool
 
 // Connector represents a session connector which used to manage a number of
-// sessions, data send to the connector will send to all session in it.
+// users, data send to the connector will send to all session in it.
 type Connector struct {
 	node       *nodes.Node
 	mu         sync.RWMutex
-	status     int32                      // channel current status
-	sessions   map[int64]*session.Session // session id map to session instance
+	status     int32               // channel current status
+	users      map[int]*GamePlayer // session id map to session instance
 	natsaddrs  string
 	client     *nats.Conn
 	msgch      chan *nats.Msg
@@ -86,7 +85,7 @@ func WithConnectorNatsaddrs(address string) ConnectorOpts {
 func NewConnector(opts ...ConnectorOpts) *Connector {
 	c := &Connector{
 		status:    connectorStatusWorking,
-		sessions:  make(map[int64]*session.Session),
+		users:     make(map[int]*GamePlayer),
 		natsaddrs: nats.DefaultURL,
 		msgch:     make(chan *nats.Msg, 64),
 		shut:      make(chan struct{}, 1),
@@ -148,13 +147,12 @@ func (c *Connector) AfterInit() {
 }
 
 // Member returns specified UID's session
-func (c *Connector) Member(uid int) (*session.Session, error) {
+func (c *Connector) Member(uid int) (*GamePlayer, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	nuid := int64(uid)
-	for _, s := range c.sessions {
-		if s.UID() == nuid {
-			return s, nil
+	for _, u := range c.users {
+		if u.Uid == uid {
+			return u, nil
 		}
 	}
 
@@ -196,7 +194,7 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 			state = int(tmp.(float64))
 		}
 		if nid == c.node.Nid {
-			sess, err := c.Member(uid)
+			u, err := c.Member(uid)
 			if err != nil {
 				logger.Println(err)
 				user := c.GetUser(uid)
@@ -209,11 +207,11 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 					return
 				}
 			}
-			if sid == sess.ID() {
-				sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
-				sess.Clear()
+			if sid == u.Sess.ID() {
+				u.Sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
+				u.Sess.Clear()
 				if state != 1 {
-					sess.Close()
+					u.Sess.Close()
 				}
 				c.RemoveUser(uid)
 			}
@@ -231,14 +229,14 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 		sid := payload.Receiver.Sid
 		nid := payload.Receiver.Nid
 		if nid == c.node.Nid {
-			sess, err := c.Member(uid)
+			u, err := c.Member(uid)
 			if err != nil {
 				logger.Println(err)
 				msg.Respond(ResponseFail)
 				return
 			}
-			if sid == sess.ID() {
-				err = sess.Push(payload.Route, payload.Msg)
+			if sid == u.Sess.ID() {
+				err = u.Sess.Push(payload.Route, payload.Msg)
 				if err != nil {
 					logger.Println(err)
 				}
@@ -253,13 +251,13 @@ func (c *Connector) HandleMsg(msg *nats.Msg) {
 			return
 		}
 		uid := int(payload["uid"].(float64))
-		sess, err := c.Member(uid)
+		u, err := c.Member(uid)
 		if err != nil {
 			logger.Println(err)
 			return
 		}
 		delete(payload, "uid")
-		sess.Push("game", payload)
+		u.Sess.Push("game", payload)
 	case c.s2cDestory:
 		payload := make(map[string]interface{})
 		err := utils.Serializer.Unmarshal(msg.Data, payload)
@@ -383,8 +381,8 @@ func (c *Connector) Members() []int64 {
 	defer c.mu.RUnlock()
 
 	members := []int64{}
-	for _, s := range c.sessions {
-		members = append(members, s.UID())
+	for _, s := range c.users {
+		members = append(members, s.Sess.UID())
 	}
 
 	return members
@@ -408,11 +406,11 @@ func (c *Connector) Multicast(route string, v interface{}, filter SessionFilter)
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for _, s := range c.sessions {
-		if !filter(s) {
+	for _, u := range c.users {
+		if !filter(u) {
 			continue
 		}
-		if err = s.Push(route, data); err != nil {
+		if err = u.Sess.Push(route, data); err != nil {
 			logger.Println(err.Error())
 		}
 	}
@@ -438,9 +436,9 @@ func (c *Connector) Broadcast(route string, v interface{}) error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	for _, s := range c.sessions {
-		if err = s.Push(route, data); err != nil {
-			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", s.ID(), s.UID(), err.Error()))
+	for _, u := range c.users {
+		if err = u.Sess.Push(route, data); err != nil {
+			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", u.Sess.ID(), u.Sess.UID(), err.Error()))
 		}
 	}
 
@@ -453,46 +451,46 @@ func (c *Connector) Contains(uid int) bool {
 	return err == nil
 }
 
-// Add add session to connector
-func (c *Connector) Add(s *session.Session) error {
+// Add add user to connector
+func (c *Connector) Add(s *GamePlayer) error {
 	if c.isClosed() {
 		return ErrClosedConnector
 	}
 
 	if envdebug {
-		logger.Println(fmt.Sprintf("Add session to connector, ID=%d, UID=%d", s.ID(), s.UID()))
+		logger.Println(fmt.Sprintf("Add session to connector, ID=%d, UID=%d", s.Sess.ID(), s.Sess.UID()))
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	id := s.ID()
-	_, ok := c.sessions[s.ID()]
+	id := s.Uid
+	_, ok := c.users[id]
 	if ok {
 		return ErrSessionDuplication
 	}
-	c.sessions[id] = s
+	c.users[id] = s
 	return nil
 }
 
 // Leave remove specified UID related session from connector
-func (c *Connector) Leave(s *session.Session) error {
+func (c *Connector) Leave(s *GamePlayer) error {
 	if c.isClosed() {
 		return ErrClosedConnector
 	}
 
 	if envdebug {
-		logger.Println(fmt.Sprintf("Remove session from connector, UID=%d", s.UID()))
+		logger.Println(fmt.Sprintf("Remove session from connector, UID=%d", s.Uid))
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	delete(c.sessions, s.ID())
+	delete(c.users, s.Uid)
 	return nil
 }
 
-// LeaveAll clear all sessions in the connector
+// LeaveAll clear all users in the connector
 func (c *Connector) LeaveAll() error {
 	if c.isClosed() {
 		return ErrClosedConnector
@@ -501,7 +499,7 @@ func (c *Connector) LeaveAll() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.sessions = make(map[int64]*session.Session)
+	c.users = make(map[int]*GamePlayer)
 	return nil
 }
 
@@ -510,7 +508,7 @@ func (c *Connector) Count() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return len(c.sessions)
+	return len(c.users)
 }
 
 func (c *Connector) isClosed() bool {
@@ -529,6 +527,6 @@ func (c *Connector) Close() error {
 	atomic.StoreInt32(&c.status, connectorStatusClosed)
 
 	// release all reference
-	c.sessions = make(map[int64]*session.Session)
+	c.users = make(map[int]*GamePlayer)
 	return nil
 }
