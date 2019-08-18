@@ -205,7 +205,7 @@ func (g *GameManager) EnterToGame(player *game.GamePlayer, serverdata *game.Serv
 		if rel == 0 {
 			g.enterMaxConnects = 0
 			channel.SetStatus(game.ChannelWorking)
-			u.SetPlayerChannel(channel)
+			player.SetPlayerChannel(channel)
 			if cb != nil {
 				cb(data)
 			}
