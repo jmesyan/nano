@@ -166,11 +166,11 @@ func (g *GameManager) ReconnectToGame(uid int, connectServerdata *game.ServerDat
 		if connectServerdata != nil && serverdata.Gsidtid == connectServerdata.Gsidtid {
 			return nil, errors.New(fmt.Sprintf("same user request to game:%#v", connectServerdata))
 		}
-		u, err := game.UserManagerHandler.Member(uid)
+		u, err := game.UMHandler.Member(uid)
 		if err != nil {
 			return nil, err
 		}
-		err = u.Sess.Push("reconnect", serverdata)
+		err = u.Session.Push("reconnect", serverdata)
 		if err != nil {
 			return nil, err
 		}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jmesyan/nano/dcm"
-	"github.com/jmesyan/nano/users"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"strings"
@@ -13,7 +12,7 @@ import (
 )
 
 var (
-	UserManagerHandler = NewUserManager()
+	UMHandler = NewUserManager()
 )
 
 type MsgReceiver struct {
@@ -28,22 +27,29 @@ type MsgLoad struct {
 }
 
 type UserManager struct {
-	locals  map[int]*GamePlayer
-	remotes map[int]*GamePlayer
-	lmu     sync.RWMutex
-	rmu     sync.RWMutex
+	locals    map[int]*GamePlayer
+	remotes   map[int]*GamePlayer
+	connector *Connector
+	lmu       sync.RWMutex
+	rmu       sync.RWMutex
 }
 
 type UserManagerOpt func(um *UserManager)
 
 func NewUserManager(opts ...UserManagerOpt) *UserManager {
-	um := &UserManager{}
+	um := &UserManager{
+		connector: ConnectorHandler,
+	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			opt(um)
 		}
 	}
 	return um
+}
+
+func (um *UserManager) NID() string {
+	return um.connector.node.Nid
 }
 
 func (um *UserManager) GetUser(uid int) *GamePlayer {
@@ -59,7 +65,7 @@ func (um *UserManager) GetUser(uid int) *GamePlayer {
 		logger.Println(err)
 		return nil
 	}
-	user := &users.User{}
+	var user *GamePlayer
 	err = utils.Serializer.Unmarshal(kv.Value, user)
 	if err != nil {
 		logger.Println(err)
@@ -67,7 +73,11 @@ func (um *UserManager) GetUser(uid int) *GamePlayer {
 	}
 	clientAddr := strings.TrimLeft(user.ConnectorNid, "connector_")
 	player := NewGamePlayer(user.Uid, clientAddr, ConnectorHandler.client)
-	um.AddRemote(player)
+	err = um.AddRemote(player)
+	if err != nil {
+		logger.Println(err)
+		return nil
+	}
 	return player
 }
 
@@ -91,12 +101,12 @@ func (um *UserManager) RemoveUser(uid int) error {
 	return nil
 }
 
-func (um *UserManager) StoreUser(uid int, data *users.User) error {
-	user, err := utils.Serializer.Marshal(data)
+func (um *UserManager) StoreUser(u *GamePlayer) error {
+	user, err := utils.Serializer.Marshal(u)
 	if err != nil {
 		return err
 	}
-	key := fmt.Sprintf("user_%d", uid)
+	key := fmt.Sprintf("user_%d", u.Uid)
 	err = dcm.DCManager.SetValue(key, user)
 	if err != nil {
 		return err
@@ -158,7 +168,7 @@ func (um *UserManager) Multicast(route string, v interface{}, filter SessionFilt
 		if !filter(u) {
 			continue
 		}
-		if err = u.Sess.Push(route, data); err != nil {
+		if err = u.Session.Push(route, data); err != nil {
 			logger.Println(err.Error())
 		}
 	}
@@ -180,8 +190,8 @@ func (um *UserManager) Broadcast(route string, v interface{}) error {
 	defer um.lmu.RUnlock()
 
 	for _, u := range um.locals {
-		if err = u.Sess.Push(route, data); err != nil {
-			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", u.Sess.ID(), u.Sess.UID(), err.Error()))
+		if err = u.Session.Push(route, data); err != nil {
+			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", u.Session.ID(), u.Session.UID(), err.Error()))
 		}
 	}
 
@@ -222,7 +232,7 @@ func (um *UserManager) Member(uid int) (*GamePlayer, error) {
 // Add add user to usermanager
 func (um *UserManager) Add(u *GamePlayer) error {
 	if envdebug {
-		logger.Println(fmt.Sprintf("Add session to usermanager, ID=%d, UID=%d", u.Sess.ID(), u.Sess.UID()))
+		logger.Println(fmt.Sprintf("Add session to usermanager, ID=%d, UID=%d", u.Session.ID(), u.Session.UID()))
 	}
 
 	um.lmu.Lock()
@@ -232,10 +242,12 @@ func (um *UserManager) Add(u *GamePlayer) error {
 	id := u.Uid
 	_, ok := um.locals[id]
 	if ok {
-		return ErrSessionDuplication
+		err := um.StoreUser(u)
+		return err
 	}
 	um.locals[id] = u
-	return nil
+	err := um.StoreUser(u)
+	return err
 }
 func (um *UserManager) AddRemote(u *GamePlayer) error {
 	if envdebug {
@@ -309,7 +321,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 			if err != nil {
 				logger.Println(err)
 				user := um.GetLocalUser(uid)
-				if user != nil && user.Chan != nil && user.Chan.Status < ChannelWorking {
+				if user != nil && user.Channel != nil {
 					um.RemoveUser(uid)
 					msg.Respond(ResponseSuccess)
 					return
@@ -318,11 +330,11 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 					return
 				}
 			}
-			if sid == u.Sess.ID() {
-				u.Sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
-				u.Sess.Clear()
+			if sid == u.Session.ID() {
+				u.Session.Push("quit", map[string]interface{}{"state": state, "id": sid})
+				u.Session.Clear()
 				if state != 1 {
-					u.Sess.Close()
+					u.Session.Close()
 				}
 				um.RemoveUser(uid)
 			}
@@ -346,8 +358,8 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 				msg.Respond(ResponseFail)
 				return
 			}
-			if sid == u.Sess.ID() {
-				err = u.Sess.Push(payload.Route, payload.Msg)
+			if sid == u.Session.ID() {
+				err = u.Session.Push(payload.Route, payload.Msg)
 				if err != nil {
 					logger.Println(err)
 				}
@@ -368,7 +380,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 			return
 		}
 		delete(payload, "uid")
-		u.Sess.Push("game", payload)
+		u.Session.Push("game", payload)
 	case c.s2cDestory:
 		payload := make(map[string]interface{})
 		err := utils.Serializer.Unmarshal(msg.Data, payload)

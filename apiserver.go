@@ -72,10 +72,10 @@ func (as *ApiServer) processPacket(p *apiserver.Packet) error {
 			sys.MAINTENANCE_TIME = 0
 		}
 		filter := func(u *game.GamePlayer) bool {
-			tableid := u.Sess.Int("tableid")
+			tableid := u.Int("tableid")
 			return tableid == 0
 		}
-		err := game.UserManagerHandler.Multicast("serverReboot", map[string]interface{}{"time": sys.MAINTENANCE_TIME}, filter)
+		err := game.UMHandler.Multicast("serverReboot", map[string]interface{}{"time": sys.MAINTENANCE_TIME}, filter)
 		if err != nil {
 			logger.Println(err)
 		}

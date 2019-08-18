@@ -146,7 +146,7 @@ func (c *Connector) watcher() {
 	for {
 		select {
 		case msg := <-c.msgch:
-			UserManagerHandler.DoConnectorMsg(c, msg)
+			UMHandler.DoConnectorMsg(c, msg)
 		case <-c.shut:
 			logger.Println("receive stop msg")
 			close(c.msgch)
@@ -183,6 +183,6 @@ func (c *Connector) Close() error {
 	}
 
 	atomic.StoreInt32(&c.status, connectorStatusClosed)
-	UserManagerHandler.LeaveAll()
+	UMHandler.LeaveAll()
 	return nil
 }
