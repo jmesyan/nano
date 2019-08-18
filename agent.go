@@ -190,7 +190,7 @@ func (a *agent) Close() error {
 	}
 
 	if uid := a.session.UID(); uid > 0 {
-		game.ConnectorHandler.RemoveUser(int(uid))
+		game.UserManagerHandler.RemoveUser(int(uid))
 	}
 	return a.conn.Close()
 }

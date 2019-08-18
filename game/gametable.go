@@ -41,7 +41,7 @@ func (gt *GameTable) addPlayer(nuid int32) {
 	uid := int(nuid)
 	gt.player_sort[uid] = uid
 	TableManager.AddUserToTable(gt.gsidtid, uid)
-	u, err := ConnectorHandler.Member(uid)
+	u, err := UserManagerHandler.Member(uid)
 	if err == nil {
 		u.Sess.Set("gsid", gt.gsid)
 		u.Sess.Set("tableid", gt.tableid)
@@ -54,7 +54,7 @@ func (gt *GameTable) RemovePlayer(nuid int32) {
 	uid := int(nuid)
 	delete(gt.player_sort, uid)
 	TableManager.RemoveTableUser(gt.gsidtid, uid)
-	u, err := ConnectorHandler.Member(uid)
+	u, err := UserManagerHandler.Member(uid)
 	if err == nil {
 		u.Sess.Remove("gsid")
 		u.Sess.Remove("tableid")

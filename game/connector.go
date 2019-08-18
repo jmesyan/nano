@@ -25,12 +25,10 @@ import (
 	"fmt"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/nodes"
-	"github.com/jmesyan/nano/users"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 var (
@@ -61,8 +59,7 @@ type SessionFilter func(*GamePlayer) bool
 type Connector struct {
 	node       *nodes.Node
 	mu         sync.RWMutex
-	status     int32               // channel current status
-	users      map[int]*GamePlayer // session id map to session instance
+	status     int32 // channel current status
 	natsaddrs  string
 	client     *nats.Conn
 	msgch      chan *nats.Msg
@@ -85,7 +82,6 @@ func WithConnectorNatsaddrs(address string) ConnectorOpts {
 func NewConnector(opts ...ConnectorOpts) *Connector {
 	c := &Connector{
 		status:    connectorStatusWorking,
-		users:     make(map[int]*GamePlayer),
 		natsaddrs: nats.DefaultURL,
 		msgch:     make(chan *nats.Msg, 64),
 		shut:      make(chan struct{}, 1),
@@ -146,24 +142,11 @@ func (c *Connector) AfterInit() {
 	go c.watcher()
 }
 
-// Member returns specified UID's session
-func (c *Connector) Member(uid int) (*GamePlayer, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	for _, u := range c.users {
-		if u.Uid == uid {
-			return u, nil
-		}
-	}
-
-	return nil, ErrMemberNotFound
-}
-
 func (c *Connector) watcher() {
 	for {
 		select {
 		case msg := <-c.msgch:
-			c.HandleMsg(msg)
+			UserManagerHandler.DoConnectorMsg(c, msg)
 		case <-c.shut:
 			logger.Println("receive stop msg")
 			close(c.msgch)
@@ -171,195 +154,6 @@ func (c *Connector) watcher() {
 			return
 		}
 	}
-}
-
-func (c *Connector) HandleMsg(msg *nats.Msg) {
-	logger.Printf("handle connector nats msg:%#v\n", msg)
-	switch msg.Subject {
-	case c.kickTopic:
-		payload := &MsgLoad{}
-		err := utils.Serializer.Unmarshal(msg.Data, payload)
-		if err != nil {
-			logger.Println(err)
-			msg.Respond(ResponseFail)
-			return
-		}
-		uid := payload.Receiver.Uid
-		sid := payload.Receiver.Sid
-		nid := payload.Receiver.Nid
-		data := payload.Msg
-		//收到踢人消息
-		state := 0
-		if tmp, ok := data["state"]; ok {
-			state = int(tmp.(float64))
-		}
-		if nid == c.node.Nid {
-			u, err := c.Member(uid)
-			if err != nil {
-				logger.Println(err)
-				user := c.GetUser(uid)
-				if user != nil && len(user.GameserverNid) == 0 {
-					c.RemoveUser(uid)
-					msg.Respond(ResponseSuccess)
-					return
-				} else {
-					msg.Respond(ResponseFail)
-					return
-				}
-			}
-			if sid == u.Sess.ID() {
-				u.Sess.Push("quit", map[string]interface{}{"state": state, "id": sid})
-				u.Sess.Clear()
-				if state != 1 {
-					u.Sess.Close()
-				}
-				c.RemoveUser(uid)
-			}
-		}
-		msg.Respond(ResponseSuccess)
-	case c.pushTopic:
-		payload := &MsgLoad{}
-		err := utils.Serializer.Unmarshal(msg.Data, payload)
-		if err != nil {
-			logger.Println(err)
-			msg.Respond(ResponseFail)
-			return
-		}
-		uid := payload.Receiver.Uid
-		sid := payload.Receiver.Sid
-		nid := payload.Receiver.Nid
-		if nid == c.node.Nid {
-			u, err := c.Member(uid)
-			if err != nil {
-				logger.Println(err)
-				msg.Respond(ResponseFail)
-				return
-			}
-			if sid == u.Sess.ID() {
-				err = u.Sess.Push(payload.Route, payload.Msg)
-				if err != nil {
-					logger.Println(err)
-				}
-			}
-		}
-		msg.Respond(ResponseSuccess)
-	case c.s2cTopic:
-		payload := make(map[string]interface{})
-		err := utils.Serializer.Unmarshal(msg.Data, payload)
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		uid := int(payload["uid"].(float64))
-		u, err := c.Member(uid)
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		delete(payload, "uid")
-		u.Sess.Push("game", payload)
-	case c.s2cDestory:
-		payload := make(map[string]interface{})
-		err := utils.Serializer.Unmarshal(msg.Data, payload)
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		uid := int(payload["uid"].(float64))
-		cn := GetChannel(uid)
-		if cn != nil {
-			err = cn.Destory(true)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
-}
-
-type MsgReceiver struct {
-	Uid int    `json:"uid"`
-	Sid int64  `json:"sid"`
-	Nid string `json:"nid"`
-}
-type MsgLoad struct {
-	Receiver *MsgReceiver           `json:"receiver"`
-	Route    string                 `json:"route"`
-	Msg      map[string]interface{} `json:"msg"`
-}
-
-func (c *Connector) PushMsg(connector string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
-	topic := utils.GenerateTopic(connector, "push")
-	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
-	load, err := utils.Serializer.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
-	if err != nil {
-		return err
-	}
-	resp := string(msg.Data)
-	if resp == "SUCCESS" {
-		return nil
-	}
-	return errors.New(resp)
-}
-
-func (c *Connector) KickUser(connector string, receiver *MsgReceiver, state int) error {
-	topic := utils.GenerateTopic(connector, "kick")
-	payload := &MsgLoad{Receiver: receiver, Msg: map[string]interface{}{"state": state}}
-	load, err := utils.Serializer.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	msg, err := c.client.Request(topic, load, 10*time.Millisecond)
-	if err != nil {
-		return err
-	}
-	resp := string(msg.Data)
-	if resp == "SUCCESS" {
-		return nil
-	}
-	return errors.New(resp)
-}
-
-func (c *Connector) StoreUser(uid int, data *users.User) error {
-	user, err := utils.Serializer.Marshal(data)
-	if err != nil {
-		return err
-	}
-	key := fmt.Sprintf("user_%d", uid)
-	err = dcm.DCManager.SetValue(key, user)
-	if err != nil {
-		return err
-
-	}
-	return nil
-}
-func (c *Connector) RemoveUser(uid int) error {
-	key := fmt.Sprintf("user_%d", uid)
-	err := dcm.DCManager.DelValue(key)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Connector) GetUser(uid int) *users.User {
-	key := fmt.Sprintf("user_%d", uid)
-	kv, err := dcm.DCManager.GetValue(key)
-	if err != nil {
-		logger.Println(err)
-		return nil
-	}
-	user := &users.User{}
-	err = utils.Serializer.Unmarshal(kv.Value, user)
-	if err != nil {
-		logger.Println(err)
-		return nil
-	}
-	return user
 }
 
 func (c *Connector) BeforeShutdown() {
@@ -373,142 +167,6 @@ func (c *Connector) Shutdown() {
 	}
 	close(c.shut)
 	c.node.Status = nodes.NodeStoped
-}
-
-// Members returns all member's UID in current connector
-func (c *Connector) Members() []int64 {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	members := []int64{}
-	for _, s := range c.users {
-		members = append(members, s.Sess.UID())
-	}
-
-	return members
-}
-
-// Multicast  push  the message to the filtered clients
-func (c *Connector) Multicast(route string, v interface{}, filter SessionFilter) error {
-	if c.isClosed() {
-		return ErrClosedConnector
-	}
-
-	data, err := utils.SerializeOrRaw(v)
-	if err != nil {
-		return err
-	}
-
-	if envdebug {
-		logger.Println(fmt.Sprintf("Type=Multicast Route=%s, Data=%+v", route, v))
-	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	for _, u := range c.users {
-		if !filter(u) {
-			continue
-		}
-		if err = u.Sess.Push(route, data); err != nil {
-			logger.Println(err.Error())
-		}
-	}
-
-	return nil
-}
-
-// Broadcast push  the message(s) to  all members
-func (c *Connector) Broadcast(route string, v interface{}) error {
-	if c.isClosed() {
-		return ErrClosedConnector
-	}
-
-	data, err := utils.SerializeOrRaw(v)
-	if err != nil {
-		return err
-	}
-
-	if envdebug {
-		logger.Println(fmt.Sprintf("Type=Broadcast Route=%s, Data=%+v", route, v))
-	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	for _, u := range c.users {
-		if err = u.Sess.Push(route, data); err != nil {
-			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", u.Sess.ID(), u.Sess.UID(), err.Error()))
-		}
-	}
-
-	return err
-}
-
-// Contains check whether a UID is contained in current connector or not
-func (c *Connector) Contains(uid int) bool {
-	_, err := c.Member(uid)
-	return err == nil
-}
-
-// Add add user to connector
-func (c *Connector) Add(s *GamePlayer) error {
-	if c.isClosed() {
-		return ErrClosedConnector
-	}
-
-	if envdebug {
-		logger.Println(fmt.Sprintf("Add session to connector, ID=%d, UID=%d", s.Sess.ID(), s.Sess.UID()))
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	id := s.Uid
-	_, ok := c.users[id]
-	if ok {
-		return ErrSessionDuplication
-	}
-	c.users[id] = s
-	return nil
-}
-
-// Leave remove specified UID related session from connector
-func (c *Connector) Leave(s *GamePlayer) error {
-	if c.isClosed() {
-		return ErrClosedConnector
-	}
-
-	if envdebug {
-		logger.Println(fmt.Sprintf("Remove session from connector, UID=%d", s.Uid))
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	delete(c.users, s.Uid)
-	return nil
-}
-
-// LeaveAll clear all users in the connector
-func (c *Connector) LeaveAll() error {
-	if c.isClosed() {
-		return ErrClosedConnector
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.users = make(map[int]*GamePlayer)
-	return nil
-}
-
-// Count get current member amount in the connector
-func (c *Connector) Count() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return len(c.users)
 }
 
 func (c *Connector) isClosed() bool {
@@ -525,8 +183,6 @@ func (c *Connector) Close() error {
 	}
 
 	atomic.StoreInt32(&c.status, connectorStatusClosed)
-
-	// release all reference
-	c.users = make(map[int]*GamePlayer)
+	UserManagerHandler.LeaveAll()
 	return nil
 }

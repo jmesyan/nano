@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"github.com/jmesyan/nano/session"
+	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
 )
 
@@ -53,4 +54,8 @@ func (u *GamePlayer) SendMsg(route string, msg interface{}) error {
 		return err
 	}
 	return errors.New("the user lose the connecter connection")
+}
+
+func (u *GamePlayer) IsPeer() bool {
+	return u.clientAddr == utils.ListenAddr
 }

@@ -25,6 +25,7 @@ const (
 	ChannelClosed
 	ChannelCreating
 	ChannelCreated
+	ChannelWorking
 )
 
 func UpdateChannel(gc *GameChannel) {
@@ -151,7 +152,7 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 			"body": base64.StdEncoding.EncodeToString(msg),
 		}
 		if gc.IsPeer() {
-			u, err := ConnectorHandler.Member(gc.Uid)
+			u, err := UserManagerHandler.Member(gc.Uid)
 			if err != nil {
 				return err
 			} else {
