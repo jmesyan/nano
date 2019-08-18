@@ -349,3 +349,12 @@ func (u *GamePlayer) Clear() {
 	defer u.Unlock()
 	u.Data = map[string]interface{}{}
 }
+
+func (u *GamePlayer) Push(route string, data interface{}) error {
+	if u.Session != nil {
+		return u.Session.Push(route, data)
+	} else {
+		err := UMHandler.PushMsg(u.ConnectorNid, &MsgReceiver{Uid: u.Uid, Sid: u.Sid, Nid: u.ConnectorNid}, route, data)
+		return err
+	}
+}
