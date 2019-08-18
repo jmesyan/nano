@@ -350,7 +350,7 @@ func (u *GamePlayer) Clear() {
 	u.Data = map[string]interface{}{}
 }
 
-func (u *GamePlayer) Push(route string, data interface{}) error {
+func (u *GamePlayer) Push(route string, data map[string]interface{}) error {
 	if u.Session != nil {
 		return u.Session.Push(route, data)
 	} else {

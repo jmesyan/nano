@@ -80,7 +80,7 @@ func (as *ApiServer) processPacket(p *apiserver.Packet) error {
 			logger.Println(err)
 		}
 	case "getGameListState":
-		list := GameManagerHander.GetGameListState()
+		list := GMHander.GetGameListState()
 		as.SendObj(list)
 	}
 	return nil

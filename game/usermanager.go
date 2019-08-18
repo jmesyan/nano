@@ -22,9 +22,9 @@ type MsgReceiver struct {
 	Nid string `json:"nid"`
 }
 type MsgLoad struct {
-	Receiver *MsgReceiver `json:"receiver"`
-	Route    string       `json:"route"`
-	Msg      interface{}  `json:"msg"`
+	Receiver *MsgReceiver           `json:"receiver"`
+	Route    string                 `json:"route"`
+	Msg      map[string]interface{} `json:"msg"`
 }
 
 type UserManager struct {
@@ -133,7 +133,7 @@ func (um *UserManager) KickUser(connectorNid string, receiver *MsgReceiver, stat
 	}
 	return errors.New(resp)
 }
-func (um *UserManager) PushMsg(connectorNid string, receiver *MsgReceiver, route string, data interface{}) error {
+func (um *UserManager) PushMsg(connectorNid string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
 	topic := utils.GenerateTopic(connectorNid, "push")
 	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
 	load, err := utils.Serializer.Marshal(payload)
@@ -310,7 +310,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 		uid := payload.Receiver.Uid
 		sid := payload.Receiver.Sid
 		nid := payload.Receiver.Nid
-		data := payload.Msg.(map[string]interface{})
+		data := payload.Msg
 		//收到踢人消息
 		state := 0
 		if tmp, ok := data["state"]; ok {

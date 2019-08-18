@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	GameManagerHander *GameManager
-	DefautListenGame  = "0.0.0.0:20572"
+	GMHander         *GameManager
+	DefautListenGame = "0.0.0.0:20572"
 )
 
 type GameManager struct {
@@ -256,6 +256,6 @@ func (g *GameManager) GetGameListState() map[string]interface{} {
 }
 
 func init() {
-	GameManagerHander = NewGameManager()
-	Register(GameManagerHander)
+	GMHander = NewGameManager()
+	Register(GMHander)
 }
