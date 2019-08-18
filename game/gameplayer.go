@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"github.com/jmesyan/nano/session"
 	"github.com/nats-io/nats.go"
 	"sync"
@@ -40,6 +41,14 @@ func NewGamePlayer(uid int, connectorNid string, client *nats.Conn, opts ...Game
 		}
 	}
 	return u
+}
+
+func (u *GamePlayer) NotifyConnector(topic string, data []byte) {
+	ntopic := fmt.Sprintf("%s.%s", u.ConnectorNid, topic)
+	err := u.client.Publish(ntopic, data)
+	if err != nil {
+		logger.Println(err)
+	}
 }
 
 func (u *GamePlayer) SetPlayerSession(s *session.Session) {

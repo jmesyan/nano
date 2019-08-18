@@ -3,10 +3,11 @@ package game
 import (
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
-	"strings"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -71,8 +72,7 @@ func (um *UserManager) GetUser(uid int) *GamePlayer {
 		logger.Println(err)
 		return nil
 	}
-	clientAddr := strings.TrimLeft(user.ConnectorNid, "connector_")
-	player := NewGamePlayer(user.Uid, clientAddr, ConnectorHandler.client)
+	player := NewGamePlayer(user.Uid, user.ConnectorNid, ConnectorHandler.client)
 	err = um.AddRemote(player)
 	if err != nil {
 		logger.Println(err)
@@ -393,7 +393,24 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 		if cn != nil {
 			err = cn.Destory(true)
 			if err != nil {
-				fmt.Println(err)
+				logger.Println(err)
+			}
+		}
+	case c.enterTopic:
+		body := &ControlUserEnterroom{}
+		err := proto.Unmarshal(msg.Data, body)
+		if err != nil {
+			logger.Println(err)
+			return
+		} else {
+			uid := int(body.GetUid())
+			user := UMHandler.GetUser(uid)
+			if user == nil {
+				logger.Println("error enter user:", uid)
+				return
+			}
+			if user.IsPeer() {
+				TickHandler.ExecTick(body.GetTick(), reflect.ValueOf(body))
 			}
 		}
 	}

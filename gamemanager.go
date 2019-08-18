@@ -151,7 +151,8 @@ func (g *GameManager) GetCenterServerByBalance(ngid int) *game.GameServer {
 	return nil
 }
 
-func (g *GameManager) ReconnectToGame(uid int, connectServerdata *game.ServerData) (*game.ServerData, error) {
+func (g *GameManager) ReconnectToGame(player *game.GamePlayer, connectServerdata *game.ServerData) (*game.ServerData, error) {
+	uid := player.Uid
 	var serverdata *game.ServerData
 	channel := game.GetChannel(uid)
 	if channel != nil {
@@ -178,8 +179,9 @@ func (g *GameManager) ReconnectToGame(uid int, connectServerdata *game.ServerDat
 	return nil, nil
 }
 
-func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(result *game.ControlUserEnterroom), isretry bool) error {
-	isreconnect, err := g.ReconnectToGame(uid, serverdata)
+func (g *GameManager) EnterToGame(player *game.GamePlayer, serverdata *game.ServerData, cb func(result *game.ControlUserEnterroom), isretry bool) error {
+	uid := player.Uid
+	isreconnect, err := g.ReconnectToGame(player, serverdata)
 	if err != nil {
 		return err
 	}
@@ -202,6 +204,8 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 		rel := data.GetRel()
 		if rel == 0 {
 			g.enterMaxConnects = 0
+			channel.SetStatus(game.ChannelWorking)
+			u.SetPlayerChannel(channel)
 			if cb != nil {
 				cb(data)
 			}
@@ -219,7 +223,7 @@ func (g *GameManager) EnterToGame(uid int, serverdata *game.ServerData, cb func(
 				if g.enterMaxConnects <= 10 {
 					g.enterMaxConnects++
 					time.AfterFunc(100*time.Nanosecond, func() {
-						err = g.EnterToGame(uid, serverdata, cb, isretry)
+						err = g.EnterToGame(player, serverdata, cb, isretry)
 						if err != nil {
 							fmt.Println(err)
 						}

@@ -67,9 +67,15 @@ func WithChanConn(conn *nats.Conn) GameChannelOpt {
 		gc.conn = conn
 	}
 }
-func WithFromSource(game bool) GameChannelOpt {
+func WithFromGame(game bool) GameChannelOpt {
 	return func(gc *GameChannel) {
 		gc.FromGame = game
+	}
+}
+
+func WithChanStatus(status ChannelStatus) GameChannelOpt {
+	return func(gc *GameChannel) {
+		gc.Status = status
 	}
 }
 
@@ -108,6 +114,9 @@ func (gc *GameChannel) SetGameNid(gameNid, gameAddr string) {
 	gc.Status = ChannelCreated
 	UpdateChannel(gc)
 }
+func (gc *GameChannel) SetStatus(status ChannelStatus) {
+	gc.Status = status
+}
 
 //IsPeer 客户端和服务端是否在一起
 func (gc *GameChannel) IsPeer() bool {
@@ -119,7 +128,7 @@ func (gc *GameChannel) C2S(msg string, args ...string) error {
 	if len(args) > 0 {
 		cmd = args[0]
 	}
-	if gc.Status == ChannelCreated {
+	if gc.Status >= ChannelCreated {
 		data := fmt.Sprintf("04AAAA%s%s%s", gc.Id, cmd, msg)
 		if gc.IsPeer() {
 			server := gc.service.GetServerByGSID(gc.Gsid)
@@ -145,7 +154,7 @@ func (gc *GameChannel) C2S(msg string, args ...string) error {
 }
 
 func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
-	if gc.Status == ChannelCreated {
+	if gc.Status >= ChannelCreated {
 		data := map[string]interface{}{
 			"cmd":  cmd,
 			"n":    heart,

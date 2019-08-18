@@ -68,6 +68,7 @@ type Connector struct {
 	pushTopic  string
 	s2cTopic   string
 	s2cDestory string
+	enterTopic string
 }
 
 type ConnectorOpts func(g *Connector)
@@ -136,6 +137,7 @@ func (c *Connector) Init() {
 	c.pushTopic = utils.GenerateTopic(c.node.Nid, "push")
 	c.s2cTopic = utils.GenerateTopic(c.node.Nid, "s2c")
 	c.s2cDestory = utils.GenerateTopic(c.node.Nid, "channel.destory")
+	c.enterTopic = utils.GenerateTopic(c.node.Nid, "game.enter")
 }
 
 func (c *Connector) AfterInit() {

@@ -112,7 +112,33 @@ func (g *GameServer) processPacket(p *Packet) error {
 			if err != nil {
 				return err
 			} else {
-				TickHandler.ExecTick(tick, reflect.ValueOf(body))
+				uid := int(body.GetUid())
+				user := UMHandler.GetUser(uid)
+				if user == nil {
+					logger.Println("error enter user:", uid)
+					return nil
+				}
+				if user.IsPeer() {
+					TickHandler.ExecTick(tick, reflect.ValueOf(body))
+				} else {
+					channel := NewGameChannel(uid, user.ConnectorNid, user.client, g.Service, WithFromGame(true))
+					channel.SetGameNid(g.NID(), g.GetNode().Address)
+					channel.SetStatus(ChannelWorking)
+					user.SetPlayerChannel(channel)
+					err = UMHandler.AddRemote(user)
+					if err != nil {
+						logger.Println(err)
+						return err
+					}
+					body.Tick = &tick
+					ndata, err := proto.Marshal(body)
+					if err != nil {
+						logger.Println(err)
+						return err
+					}
+					user.NotifyConnector("game.enter", ndata)
+				}
+
 			}
 		}
 		return nil

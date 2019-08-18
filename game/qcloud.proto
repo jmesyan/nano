@@ -155,12 +155,13 @@ message control_user_enterroom		//ACK |OGID_ROOMSVR_ENTERROOM 12801
     optional int32 step	= 3;
     optional int32 cid	= 4 [default = 0];
     optional int32 gid	= 5 [default = 0];
-    optional int32 rtype	= 6 [default = 0];
+    optional int32 rtype = 6 [default = 0];
     optional int32 ridx	= 7 [default = 0];
     optional int64 bank	= 8 [default = 0];
     optional int32 tid  = 9 [default = 0];//桌子id
     optional int32 uid = 10 [default = 0];//uid
     optional int32 code = 11 [default = 0];//房间号
+    optional int32 tick = 12 [default = 0];//回调号
 }
 message control_gate		//REQ|OGID_CONTROL_GATE 9475
 {
