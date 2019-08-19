@@ -220,6 +220,16 @@ func (g *GameServer) processPacket(p *Packet) error {
 				models.RemoveUserOnline(int(uid))
 			}
 		}
+	case CMD.OGID_CONTROL_CANCEL_TABLE | CMD.ACK:
+		body := &ControlCancelTable{}
+		err := proto.Unmarshal(data, body)
+		if err != nil {
+			return err
+		}
+		gid := int32(g.Gid)
+		body.Gid = &gid
+		logger.Printf("control_cancel_table, gsid:%s, body:%#v", g.Gsid, body)
+		g.Service.ProcessServer("hall.user.endGame", reflect.ValueOf(body))
 	}
 	return nil
 }

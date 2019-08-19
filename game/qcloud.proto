@@ -533,6 +533,7 @@ message control_cancel_table				//ACK|OGID_CONTROL_CANCEL_TABLE  9501 解散桌�
     repeated matchusers musers = 13;				//比赛用户信息
     //比赛用户信息
     optional string ginfo = 14[default = ""];	//JSON
+    optional int32 gid = 15[default = 0];	//游戏id
 }
 message control_game_mjstart		//REQ|GLID_MAHJONG_PLACE 12805 开始游戏
 {

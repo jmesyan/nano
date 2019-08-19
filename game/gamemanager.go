@@ -31,6 +31,7 @@ type cmd struct {
 	OGID_ROOMSVR_ENTERROOM       int32
 	GLID_GAMEITEM_KICKTOHALL     int32
 	OGID_GAME_MSG                int32
+	OGID_CONTROL_CANCEL_TABLE    int32
 }
 
 func NewCmd() *cmd {
@@ -41,6 +42,7 @@ func NewCmd() *cmd {
 		OGID_CONTROL_REGIS:           9472,  //注册服务器
 		OGID_CONTROL_TABLES:          9476,  //注册桌子
 		OGID_CONTROL_HEART_BEAT:      9485,  //心跳
+		OGID_CONTROL_CANCEL_TABLE:    9501,  //解散桌子
 		OGID_CONTROL_USER_SIGN:       9622,  //金币场进入游戏
 		OGID_CONTROL_DISTRIBUTE_USER: 9623,  //金币场玩家分桌
 		OGID_ROOMSVR_ENTERROOM:       12801, //进入房间
