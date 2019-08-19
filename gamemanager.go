@@ -19,6 +19,7 @@ var (
 type GameManager struct {
 	listenaddrs      string
 	Serversort       map[string]*game.GameServer
+	Alltablesort     map[string]*game.GameTable
 	enterMaxConnects int
 }
 
@@ -34,6 +35,7 @@ func NewGameManager(opts ...GameManagerOpts) *GameManager {
 	g := &GameManager{
 		listenaddrs:      DefautListenGame,
 		Serversort:       make(map[string]*game.GameServer),
+		Alltablesort:     make(map[string]*game.GameTable),
 		enterMaxConnects: 0,
 	}
 	if len(opts) > 0 {
@@ -85,6 +87,10 @@ func (g *GameManager) ProcessServer(route string, body reflect.Value) {
 	} else {
 		fmt.Printf("the is no srv handler, route is:%s, body is:%#v", route, body)
 	}
+}
+
+func (g *GameManager) RegisterTable(gsidtid string, table *game.GameTable) {
+	g.Alltablesort[gsidtid] = table
 }
 
 func (g *GameManager) RegisterServer(gsid string, server *game.GameServer) {
@@ -254,6 +260,13 @@ func (g *GameManager) GetGameListState() map[string]interface{} {
 		}
 	}
 	return list
+}
+
+func (g *GameManager) GetTable(gsidtid string) *game.GameTable {
+	if table, ok := g.Alltablesort[gsidtid]; ok {
+		return table
+	}
+	return nil
 }
 
 func init() {

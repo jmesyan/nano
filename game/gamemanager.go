@@ -14,9 +14,8 @@ var (
 	CMD = NewCmd()
 )
 var (
-	logger       = log.New(os.Stderr, "game", log.LstdFlags|log.Llongfile)
-	alltablesort = make(map[int32]*GameTable)
-	ticker       = 0
+	logger = log.New(os.Stderr, "game", log.LstdFlags|log.Llongfile)
+	ticker = 0
 )
 
 type cmd struct {
@@ -103,4 +102,5 @@ type GameService interface {
 	GetServerByGSID(gsid string) *GameServer
 	RemoveServerByGSID(gsid string)
 	GetServerSort() map[string]*GameServer
+	RegisterTable(gsidtid string, table *GameTable)
 }

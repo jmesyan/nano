@@ -344,7 +344,7 @@ func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
 	gametable.Init(g.Gsid, table)
 	gametable.gameserver = g
 	g.tablesort[gametable.tableid] = gametable
-	alltablesort[gametable.tableid] = gametable
+	g.Service.RegisterTable(gametable.gsidtid, gametable)
 	return gametable
 }
 
