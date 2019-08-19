@@ -22,9 +22,9 @@ type MsgReceiver struct {
 	Nid string `json:"nid"`
 }
 type MsgLoad struct {
-	Receiver *MsgReceiver           `json:"receiver"`
-	Route    string                 `json:"route"`
-	Msg      map[string]interface{} `json:"msg"`
+	Receiver *MsgReceiver `json:"receiver"`
+	Route    string       `json:"route"`
+	Msg      interface{}  `json:"msg"`
 }
 
 type UserManager struct {
@@ -133,7 +133,7 @@ func (um *UserManager) KickUser(connectorNid string, receiver *MsgReceiver, stat
 	}
 	return errors.New(resp)
 }
-func (um *UserManager) PushMsg(connectorNid string, receiver *MsgReceiver, route string, data map[string]interface{}) error {
+func (um *UserManager) PushMsg(connectorNid string, receiver *MsgReceiver, route string, data interface{}) error {
 	topic := utils.GenerateTopic(connectorNid, "push")
 	payload := &MsgLoad{Receiver: receiver, Route: route, Msg: data}
 	load, err := utils.Serializer.Marshal(payload)
@@ -153,7 +153,7 @@ func (um *UserManager) PushMsg(connectorNid string, receiver *MsgReceiver, route
 }
 
 // Multicast  push  the message to the filtered clients
-func (um *UserManager) Multicast(route string, v interface{}, filter SessionFilter) error {
+func (um *UserManager) Multicast(route string, v map[string]interface{}, filter SessionFilter) error {
 	data, err := utils.SerializeOrRaw(v)
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (um *UserManager) Multicast(route string, v interface{}, filter SessionFilt
 		if !filter(u) {
 			continue
 		}
-		if err = u.Session.Push(route, data); err != nil {
+		if err = u.Push(route, data); err != nil {
 			logger.Println(err.Error())
 		}
 	}
@@ -176,7 +176,7 @@ func (um *UserManager) Multicast(route string, v interface{}, filter SessionFilt
 }
 
 // Broadcast push  the message(s) to  all members
-func (um *UserManager) Broadcast(route string, v interface{}) error {
+func (um *UserManager) Broadcast(route string, v map[string]interface{}) error {
 	data, err := utils.SerializeOrRaw(v)
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (um *UserManager) Broadcast(route string, v interface{}) error {
 	defer um.lmu.RUnlock()
 
 	for _, u := range um.locals {
-		if err = u.Session.Push(route, data); err != nil {
+		if err = u.Push(route, data); err != nil {
 			logger.Println(fmt.Sprintf("Session push message error, ID=%d, UID=%d, Error=%s", u.Session.ID(), u.Session.UID(), err.Error()))
 		}
 	}
@@ -310,7 +310,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 		uid := payload.Receiver.Uid
 		sid := payload.Receiver.Sid
 		nid := payload.Receiver.Nid
-		data := payload.Msg
+		data := payload.Msg.(map[string]interface{})
 		//收到踢人消息
 		state := 0
 		if tmp, ok := data["state"]; ok {
@@ -331,7 +331,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 				}
 			}
 			if sid == u.Session.ID() {
-				u.Session.Push("quit", map[string]interface{}{"state": state, "id": sid})
+				u.Push("quit", map[string]interface{}{"state": state, "id": sid})
 				u.Session.Clear()
 				if state != 1 {
 					u.Session.Close()
@@ -359,7 +359,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 				return
 			}
 			if sid == u.Session.ID() {
-				err = u.Session.Push(payload.Route, payload.Msg)
+				err = u.Push(payload.Route, payload.Msg)
 				if err != nil {
 					logger.Println(err)
 				}
@@ -380,7 +380,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 			return
 		}
 		delete(payload, "uid")
-		u.Session.Push("game", payload)
+		u.Push("game", payload)
 	case c.s2cDestory:
 		payload := make(map[string]interface{})
 		err := utils.Serializer.Unmarshal(msg.Data, payload)

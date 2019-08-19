@@ -165,7 +165,7 @@ func (gc *GameChannel) S2C(heart, cmd int32, msg []byte) error {
 			if err != nil {
 				return err
 			} else {
-				err := u.Session.Push("game", data)
+				err := u.Push("game", data)
 				if err != nil {
 					return err
 				}

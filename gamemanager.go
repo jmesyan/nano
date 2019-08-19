@@ -171,7 +171,7 @@ func (g *GameManager) ReconnectToGame(player *game.GamePlayer, connectServerdata
 		if err != nil {
 			return nil, err
 		}
-		err = u.Session.Push("reconnect", serverdata)
+		err = u.Push("reconnect", serverdata)
 		if err != nil {
 			return nil, err
 		}
