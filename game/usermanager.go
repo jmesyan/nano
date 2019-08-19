@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/jmesyan/nano/application/cache"
 	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/utils"
 	"github.com/nats-io/nats.go"
@@ -77,6 +78,19 @@ func (um *UserManager) GetUser(uid int) *GamePlayer {
 	if err != nil {
 		logger.Println(err)
 		return nil
+	}
+	if player != nil {
+		return player
+	}
+	//检查本地数据库
+	u := cache.CacheManager.GetUser(uid)
+	if u != nil {
+		player = NewGamePlayer(uid, ConnectorHandler.NID(), ConnectorHandler.client)
+		err = um.Add(player)
+		if err != nil {
+			logger.Println(err)
+			return nil
+		}
 	}
 	return player
 }
