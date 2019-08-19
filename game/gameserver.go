@@ -205,7 +205,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 		logger.Printf("control_game_msg, gsid:%s, body:%#v", g.Gsid, body)
 		uid, mtype, mtid, mpos := body.GetUid(), body.GetType(), body.GetTid(), body.GetPos()
 		if mtype == 0 { //玩家进入
-			table := g.getTable(mtid)
+			table := g.GetTable(mtid)
 			if table == nil {
 				table = g.addTable(&ControlRoomUsersTableInfo{
 					Tid: body.Tid,
@@ -214,7 +214,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 			table.addPlayer(uid)
 			models.AddUserOnline(map[string]interface{}{"userid": uid, "gid": g.Gid, "rtype": g.Rtype, "ridx": g.Ridx, "tid": mtid, "pos": mpos})
 		} else if mtype == 2 { //离开房间
-			table := g.getTable(mtid)
+			table := g.GetTable(mtid)
 			if table != nil {
 				table.RemovePlayer(uid)
 				models.RemoveUserOnline(int(uid))
@@ -337,7 +337,7 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 }
 
 func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
-	gametable := g.getTable(table.GetTid())
+	gametable := g.GetTable(table.GetTid())
 	if gametable == nil {
 		gametable = NewGameTable()
 	}
@@ -348,7 +348,7 @@ func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
 	return gametable
 }
 
-func (g *GameServer) getTable(tableid int32) *GameTable {
+func (g *GameServer) GetTable(tableid int32) *GameTable {
 	if table, ok := g.tablesort[tableid]; ok {
 		return table
 	}
