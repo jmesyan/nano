@@ -373,7 +373,7 @@ func (um *UserManager) DoConnectorMsg(c *Connector, msg *nats.Msg) {
 				return
 			}
 			if sid == u.Session.ID() {
-				err = u.Push(payload.Route, payload.Msg)
+				err = u.Session.Push(payload.Route, payload.Msg)
 				if err != nil {
 					logger.Println(err)
 				}
