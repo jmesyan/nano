@@ -122,7 +122,7 @@ func (g *GameManager) GetCenterServers(ngid int, ngc func(s *game.GameServer) bo
 	for gsid, server := range g.Serversort {
 		gid, rtype, _ := game.GetGameParamsByGsid(gsid)
 		grid := game.GetGrid(gid, rtype)
-		if grid == gcid && !game.IsServerMaintence(gsid) && ngc(server) {
+		if grid == gcid && ngc(server) {
 			gsids[gsid] = server
 		}
 	}
