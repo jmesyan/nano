@@ -28,19 +28,16 @@ type MsgLoad struct {
 }
 
 type UserManager struct {
-	locals    map[int]*GamePlayer
-	remotes   map[int]*GamePlayer
-	connector *Connector
-	lmu       sync.RWMutex
-	rmu       sync.RWMutex
+	locals  map[int]*GamePlayer
+	remotes map[int]*GamePlayer
+	lmu     sync.RWMutex
+	rmu     sync.RWMutex
 }
 
 type UserManagerOpt func(um *UserManager)
 
 func NewUserManager(opts ...UserManagerOpt) *UserManager {
-	um := &UserManager{
-		connector: ConnectorHandler,
-	}
+	um := &UserManager{}
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			opt(um)
@@ -50,7 +47,7 @@ func NewUserManager(opts ...UserManagerOpt) *UserManager {
 }
 
 func (um *UserManager) NID() string {
-	return um.connector.node.Nid
+	return ConnectorHandler.NID()
 }
 
 func (um *UserManager) GetUser(uid int) *GamePlayer {
