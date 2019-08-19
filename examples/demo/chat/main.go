@@ -86,15 +86,10 @@ func NewRoomManager() *RoomManager {
 
 // AfterInit component lifetime callback
 func (mgr *RoomManager) AfterInit() {
-	session.Lifetime.OnClosed(func(s *session.Session) {
-		if !s.HasKey(roomIDKey) {
-			return
-		}
-	})
 	mgr.timer = utils.NewTimer(time.Minute, func() {
 		for roomId, _ := range mgr.rooms {
 			println(fmt.Sprintf("UserCount: RoomID=%d, Time=%s, Count=%d",
-				roomId, time.Now().String(), assist.Count()))
+				roomId, time.Now().String()))
 		}
 	})
 }
@@ -116,20 +111,20 @@ func (mgr *RoomManager) Join(s *session.Session, msg []byte) error {
 
 	fakeUID := s.ID() //just use s.ID as uid !!!
 	s.Bind(fakeUID)   // binding session uids.Set(roomIDKey, room)
-	s.Set(roomIDKey, room)
-	s.Push("onMembers", &AllMembers{Members: assist.Members()})
-	// notify others
-	assist.Broadcast("onNewUser", &NewUser{Content: fmt.Sprintf("New user: %d", s.ID())})
-	// new user join group
-	assist.Add(s) // add session to group
+	//s.Set(roomIDKey, room)
+	//s.Push("onMembers", &AllMembers{Members: assist.Members()})
+	//// notify others
+	//assist.Broadcast("onNewUser", &NewUser{Content: fmt.Sprintf("New user: %d", s.ID())})
+	//// new user join group
+	//assist.Add(s) // add session to group
 	return s.Response(&JoinResponse{Result: "success"})
 }
 
 // Message sync last message to all members
 func (mgr *RoomManager) Message(s *session.Session, msg *UserMessage) error {
-	if !s.HasKey(roomIDKey) {
-		return fmt.Errorf("not join room yet")
-	}
+	//if !s.HasKey(roomIDKey) {
+	//	return fmt.Errorf("not join room yet")
+	//}
 	//room := s.Value(roomIDKey).(*Room)
 	return nil
 }
