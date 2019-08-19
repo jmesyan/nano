@@ -37,7 +37,10 @@ type UserManager struct {
 type UserManagerOpt func(um *UserManager)
 
 func NewUserManager(opts ...UserManagerOpt) *UserManager {
-	um := &UserManager{}
+	um := &UserManager{
+		locals:  make(map[int]*GamePlayer),
+		remotes: make(map[int]*GamePlayer),
+	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			opt(um)
