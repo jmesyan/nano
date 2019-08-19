@@ -65,3 +65,11 @@ func (gt *GameTable) RemovePlayer(nuid int32) {
 func (gt *GameTable) GetPlayerCount() int {
 	return len(gt.player_sort)
 }
+
+func (gt *GameTable) Dispose() {
+	for uid, _ := range gt.player_sort {
+		gt.RemovePlayer(int32(uid))
+	}
+	gt.code = 0
+	gt.gameserver = nil
+}

@@ -61,6 +61,19 @@ func GetGameParamsByGsid(gsid string) (gid, rtype, ridx int) {
 	}
 	return utils.StringToInt(gsid), 0, 0
 }
+func GetGameParamsByGsidtid(gsidtid string) (gid, rtype, ridx, tid int) {
+	gsids := strings.Split(gsidtid, "_")
+	if len(gsids) == 4 {
+		return utils.StringToInt(gsids[0]), utils.StringToInt(gsids[1]), utils.StringToInt(gsids[2]), utils.StringToInt(gsids[3])
+	}
+	if len(gsids) == 3 {
+		return utils.StringToInt(gsids[0]), utils.StringToInt(gsids[2]), utils.StringToInt(gsids[3]), 0
+	}
+	if len(gsids) == 2 {
+		return utils.StringToInt(gsids[0]), utils.StringToInt(gsids[2]), 0, 0
+	}
+	return utils.StringToInt(gsids[0]), 0, 0, 0
+}
 
 func GetGrid(gid, rtype int) string {
 	return fmt.Sprintf("%d_%d", gid, rtype)

@@ -114,6 +114,38 @@ func (tm *RandomAssignGameTable) GetUseTableCount(gsid string) (int, int) {
 	return use, nouse
 }
 
+func (tm *RandomAssignGameTable) deleteByNoCodeUse(gsidtid string, maintenane bool) {
+	if len(gsidtid) == 0 {
+		return
+	}
+	delete(p2p.Mj.Gsidtid, gsidtid)
+	delete(p2p.Mj.CodeSort, gsidtid)
+	for index, ngsidtid := range p2p.Mj.Use {
+		if ngsidtid == gsidtid {
+			p2p.Mj.Use = append(p2p.Mj.Use[:index], p2p.Mj.Use[index+1:]...)
+		}
+	}
+	if maintenane {
+		// delete maintenane.tables[gsidtid];
+		return
+	}
+	gid, _, _, _ := GetGameParamsByGsidtid(gsidtid)
+	if nouse, ok := p2p.Mj.Nouse[gid]; ok {
+		index := -1
+		for k, ngsidtid := range nouse {
+			if ngsidtid == gsidtid {
+				index = k
+				break
+			}
+		}
+		if index == -1 {
+			p2p.Mj.Nouse[gid] = append(p2p.Mj.Nouse[gid], gsidtid)
+		}
+	} else {
+		p2p.Mj.Nouse[gid] = append(p2p.Mj.Nouse[gid], gsidtid)
+	}
+}
+
 func init() {
 	TableManager = NewTableManager()
 }
