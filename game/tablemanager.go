@@ -114,7 +114,7 @@ func (tm *RandomAssignGameTable) GetUseTableCount(gsid string) (int, int) {
 	return use, nouse
 }
 
-func (tm *RandomAssignGameTable) deleteByNoCodeUse(gsidtid string, maintenane bool) {
+func (tm *RandomAssignGameTable) DeleteByNoCodeUse(gsidtid string, maintenane bool) {
 	if len(gsidtid) == 0 {
 		return
 	}
