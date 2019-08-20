@@ -28,41 +28,43 @@ var (
 )
 
 type GameServer struct {
-	conn       net.Conn
-	node       *nodes.Node
-	natsaddrs  string
-	status     int32
+	Node       *nodes.Node          `json:"node"`
+	Natsaddrs  string               `json:"natsaddrs"`
+	Status     int32                `json:"status"`
+	Tablesort  map[int32]*GameTable `json:"tablesort"`
+	Gsid       string               `json:"gsid"`
+	Gid        int                  `json:"gid"`
+	Rtype      int                  `json:"rtype"`
+	Ridx       int                  `json:"ridx"`
+	StartTime  int                  `json:"startTime"`
+	C2sTopic   string               `json:"c2sTopic"`
+	SsTopic    string               `json:"SsTopic"`
+	C2sDestory string               `json:"c2sDestory"`
+	IsRemote   bool                 `json:"isRemote"`
 	client     *nats.Conn
+	conn       net.Conn
 	msgch      chan *nats.Msg
 	shut       chan struct{}
-	tablesort  map[int32]*GameTable
-	Gsid       string
-	Gid        int
-	Rtype      int
-	Ridx       int
-	StartTime  int
-	Service    GameService
-	c2sTopic   string
-	c2sDestory string
+	service    GameService
 }
 
 type GameServerOpt func(g *GameServer)
 
 func WithGameServerNatsaddrs(address string) GameServerOpt {
 	return func(g *GameServer) {
-		g.natsaddrs = address
+		g.Natsaddrs = address
 	}
 }
 
 func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpt) *GameServer {
 	g := &GameServer{
 		conn:      conn,
-		tablesort: make(map[int32]*GameTable),
-		status:    gameserverStatusStarting,
-		natsaddrs: nats.DefaultURL,
+		Tablesort: make(map[int32]*GameTable),
+		Status:    gameserverStatusStarting,
+		Natsaddrs: nats.DefaultURL,
 		msgch:     make(chan *nats.Msg, 64),
 		shut:      make(chan struct{}, 1),
-		Service:   service,
+		service:   service,
 	}
 	if len(opts) > 0 {
 		for _, opt := range opts {
@@ -74,7 +76,11 @@ func NewGameServer(conn net.Conn, service GameService, opts ...GameServerOpt) *G
 }
 
 func (g *GameServer) GetNode() *nodes.Node {
-	return g.node
+	return g.Node
+}
+
+func (g *GameServer) SetClient(client *nats.Conn) {
+	g.client = client
 }
 
 func (g *GameServer) processPacket(p *Packet) error {
@@ -121,7 +127,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 				if user.IsPeer() {
 					TickHandler.ExecTick(tick, reflect.ValueOf(body))
 				} else {
-					channel := NewGameChannel(uid, user.ConnectorNid, user.client, g.Service, WithFromGame(true))
+					channel := NewGameChannel(uid, user.ConnectorNid, user.client, g.service, WithFromGame(true))
 					channel.SetGameNid(g.NID(), g.GetNode().Address)
 					channel.SetStatus(ChannelWorking)
 					user.SetPlayerChannel(channel)
@@ -194,7 +200,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 		if err != nil {
 			return err
 		} else {
-			g.Service.ProcessServer("hall.user.goldEnterRoom", reflect.ValueOf(body))
+			g.service.ProcessServer("hall.user.goldEnterRoom", reflect.ValueOf(body))
 		}
 	case CMD.OGID_GAME_MSG | CMD.ACK:
 		body := &ControlGameMsg{}
@@ -211,7 +217,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 					Tid: body.Tid,
 				})
 			}
-			table.addPlayer(uid)
+			table.AddPlayer(uid)
 			models.AddUserOnline(map[string]interface{}{"userid": uid, "gid": g.Gid, "rtype": g.Rtype, "ridx": g.Ridx, "tid": mtid, "pos": mpos})
 		} else if mtype == 2 { //离开房间
 			table := g.GetTable(mtid)
@@ -229,7 +235,7 @@ func (g *GameServer) processPacket(p *Packet) error {
 		gid := int32(g.Gid)
 		body.Gid = &gid
 		logger.Printf("control_cancel_table, gsid:%s, body:%#v", g.Gsid, body)
-		g.Service.ProcessServer("hall.user.endGame", reflect.ValueOf(body))
+		g.service.ProcessServer("hall.user.endGame", reflect.ValueOf(body))
 	}
 	return nil
 }
@@ -248,22 +254,29 @@ func (g *GameServer) SendString(format string, args ...interface{}) bool {
 		g.dispose()
 		return false
 	}
-	if g.conn != nil {
-		str += "\x00"
-		logger.Println("SendString:", str)
-		_, err := g.conn.Write([]byte(str))
+	if g.IsRemote {
+		err := g.client.Publish(g.SsTopic, []byte(str))
 		if err != nil {
-			fmt.Println(err)
+			logger.Println("sendstring remote error:", err.Error())
 		}
-		return true
+	} else {
+		if g.conn != nil {
+			str += "\x00"
+			logger.Println("SendString:", str)
+			_, err := g.conn.Write([]byte(str))
+			if err != nil {
+				fmt.Println(err)
+			}
+			return true
+		}
 	}
 	return false
 }
 
 func (g *GameServer) dispose() {
-	logger.Printf("============服务器%s析构开始=====================\n", g.node.Nid)
-	dcm.DeRegisterNode(g.node.Nid)
-	g.Service.RemoveServerByGSID(g.Gsid)
+	logger.Printf("============服务器%s析构开始=====================\n", g.Node.Nid)
+	dcm.DeRegisterNode(g.Node.Nid)
+	g.service.RemoveServerByGSID(g.Gsid)
 }
 
 func (g *GameServer) initMatchServers(tables []*ControlRoomUsersTableInfo) {
@@ -280,13 +293,13 @@ func (g *GameServer) initGoldServers(tables []*ControlRoomUsersTableInfo) {
 	}
 
 	logger.Println("initGoldServers", g.Gsid, mGsids)
-	serversort := g.Service.GetServerSort()
+	serversort := g.service.GetServerSort()
 	for _, mGid := range mGsids {
 		for Gsid, server := range serversort {
 			Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
 			if mGid == Gid && !IsServerMaintence(Gsid) && Ridx%2 == g.Ridx%2 {
 				mtids := []int32{}
-				for mtid, _ := range server.tablesort {
+				for mtid, _ := range server.Tablesort {
 					mtids = append(mtids, mtid)
 				}
 				sort.Slice(mtids, func(i, j int) bool {
@@ -313,7 +326,7 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 	if g.Gid >= 1000 && g.Gid < 5000 {
 		if gd, ok := gds.Configs[g.Gid]; ok {
 			mtids := []int32{}
-			for mtid, _ := range g.tablesort {
+			for mtid, _ := range g.Tablesort {
 				mtids = append(mtids, mtid)
 			}
 			data, err := json.Marshal(mtids)
@@ -323,7 +336,7 @@ func (g *GameServer) initTables(tables []*ControlRoomUsersTableInfo) {
 			}
 			msg := string(data)
 			if len(gd.Censerver) > 0 {
-				serversort := g.Service.GetServerSort()
+				serversort := g.service.GetServerSort()
 				for Gsid, server := range serversort {
 					Gid, Rtype, Ridx := GetGameParamsByGsid(Gsid)
 					grid := fmt.Sprintf("%d_%d", Gid, Rtype)
@@ -342,14 +355,13 @@ func (g *GameServer) addTable(table *ControlRoomUsersTableInfo) *GameTable {
 		gametable = NewGameTable()
 	}
 	gametable.Init(g.Gsid, table)
-	gametable.gameserver = g
-	g.tablesort[gametable.tableid] = gametable
-	g.Service.RegisterTable(gametable.gsidtid, gametable)
+	g.Tablesort[gametable.Tableid] = gametable
+	g.service.RegisterTable(gametable.Gsidtid, gametable)
 	return gametable
 }
 
 func (g *GameServer) GetTable(tableid int32) *GameTable {
-	if table, ok := g.tablesort[tableid]; ok {
+	if table, ok := g.Tablesort[tableid]; ok {
 		return table
 	}
 	return nil
@@ -403,38 +415,33 @@ func (g *GameServer) handleConn() {
 }
 
 func (g *GameServer) NID() string {
-	return g.node.Nid
+	return g.Node.Nid
 }
-
-func (g *GameServer) Status() int32 {
-	return g.status
-}
-
 func (g *GameServer) Init(Gid, Rtype, Ridx int32) {
 	g.Gid, g.Rtype, g.Ridx = int(Gid), int(Rtype), int(Ridx)
 	g.Gsid = fmt.Sprintf("%d_%d_%d", Gid, Rtype, Ridx)
-	oldserver := g.Service.GetServerByGSID(g.Gsid)
+	oldserver := g.service.GetServerByGSID(g.Gsid)
 	if oldserver != nil {
-		g.tablesort = oldserver.tablesort
-		oldserver.tablesort = nil
+		g.Tablesort = oldserver.Tablesort
+		oldserver.Tablesort = nil
 		g.StartTime = oldserver.StartTime
-		g.node = oldserver.node
+		g.Node = oldserver.Node
 		g.client = oldserver.client
 	} else {
-		g.Service.RegisterServer(g.Gsid, g)
+		g.service.RegisterServer(g.Gsid, g)
 		g.InitNats()
 	}
 	g.StartTime = utils.Time()
-	g.status = gameserverStatusWorking
+	g.Status = gameserverStatusWorking
 }
 
 func (g *GameServer) InitNats() {
 	var err error
 	nid := utils.GenerateNodeId(nodes.NodeGameServer, g.Gsid)
-	n := nodes.NewNode("GameServer", nid, nodes.NodeGameServer, nodes.WithNodeAddress(utils.GenerateLocalAddr()))
+	n := nodes.NewNode("GameServer", nid, nodes.NodeGameServer, nodes.WithNodeAddress(utils.GenerateLocalAddr()), nodes.WithNodeGsid(g.Gsid))
 	dcm.RegisterNode(nid, n)
-	g.node = n
-	g.client, err = nats.Connect(g.natsaddrs)
+	g.Node = n
+	g.client, err = nats.Connect(g.Natsaddrs)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -455,8 +462,9 @@ func (g *GameServer) InitNats() {
 		return
 	}
 	//设置topic
-	g.c2sTopic = fmt.Sprintf("%s.c2s", g.NID())
-	g.c2sDestory = fmt.Sprintf("%s.channel.destory", g.NID())
+	g.C2sTopic = fmt.Sprintf("%s.c2s", g.NID())
+	g.SsTopic = fmt.Sprintf("%s.ss", g.NID())
+	g.C2sDestory = fmt.Sprintf("%s.channel.destory", g.NID())
 	//监听消息
 	go g.watcher()
 }
@@ -468,7 +476,7 @@ func (g *GameServer) watcher() {
 		case <-g.shut:
 			logger.Println("receive stop msg")
 			close(g.msgch)
-			g.node.Status = nodes.NodeStoping
+			g.Node.Status = nodes.NodeStoping
 			return
 		}
 	}
@@ -477,9 +485,9 @@ func (g *GameServer) watcher() {
 func (g *GameServer) HandleMsg(msg *nats.Msg) {
 	logger.Printf("handle gameserver nats msg:%#v\n", msg)
 	switch msg.Subject {
-	case g.c2sTopic:
+	case g.C2sTopic:
 		g.SendString(string(msg.Data))
-	case g.c2sDestory:
+	case g.C2sDestory:
 		payload := make(map[string]interface{})
 		err := utils.Serializer.Unmarshal(msg.Data, payload)
 		if err != nil {
@@ -494,12 +502,15 @@ func (g *GameServer) HandleMsg(msg *nats.Msg) {
 				fmt.Println(err)
 			}
 		}
+	case g.SsTopic:
+		msg := string(msg.Data)
+		g.SendString(msg)
 	}
 }
 
 func (g *GameServer) GetUserCount() int {
 	users := 0
-	for _, table := range g.tablesort {
+	for _, table := range g.Tablesort {
 		if table != nil {
 			users += table.GetPlayerCount()
 		}
@@ -508,5 +519,5 @@ func (g *GameServer) GetUserCount() int {
 }
 
 func (g *GameServer) GetTableCount() int {
-	return len(g.tablesort)
+	return len(g.Tablesort)
 }

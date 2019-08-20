@@ -1,10 +1,13 @@
 package nano
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jmesyan/nano/dcm"
 	"github.com/jmesyan/nano/game"
 	"github.com/jmesyan/nano/utils"
+	"github.com/nats-io/nats.go"
 	"net"
 	"reflect"
 	"sort"
@@ -18,9 +21,16 @@ var (
 
 type GameManager struct {
 	listenaddrs      string
+	natsaddrs        string
 	Serversort       map[string]*game.GameServer
 	Alltablesort     map[string]*game.GameTable
 	enterMaxConnects int
+	client           *nats.Conn
+	msgch            chan *nats.Msg
+	shut             chan struct{}
+	supTopic         string
+	sdownTopic       string
+	tbregTopic       string
 }
 
 type GameManagerOpts func(g *GameManager)
@@ -34,8 +44,11 @@ func WithGameManagerAddrs(addrs string) GameManagerOpts {
 func NewGameManager(opts ...GameManagerOpts) *GameManager {
 	g := &GameManager{
 		listenaddrs:      DefautListenGame,
+		natsaddrs:        nats.DefaultURL,
 		Serversort:       make(map[string]*game.GameServer),
 		Alltablesort:     make(map[string]*game.GameTable),
+		msgch:            make(chan *nats.Msg, 64),
+		shut:             make(chan struct{}, 1),
 		enterMaxConnects: 0,
 	}
 	if len(opts) > 0 {
@@ -46,9 +59,10 @@ func NewGameManager(opts ...GameManagerOpts) *GameManager {
 	return g
 }
 func (g *GameManager) Init() {
-	go g.watcher()
+	g.InitNats()
+	go g.handleConn()
 }
-func (g *GameManager) watcher() {
+func (g *GameManager) handleConn() {
 	listen, err := net.Listen("tcp", g.listenaddrs)
 	if err != nil {
 		fmt.Println(err)
@@ -65,11 +79,110 @@ func (g *GameManager) watcher() {
 		game.NewGameServer(conn, g)
 	}
 }
+
+func (g *GameManager) InitNats() {
+	var err error
+	g.client, err = nats.Connect(g.natsaddrs)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+	_, err = g.client.ChanSubscribe("GameMaster.>", g.msgch)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+	//设置topic
+	g.supTopic = "GameMaster.sup"
+	g.sdownTopic = "GameMaster.sdown"
+	g.tbregTopic = "GameMaster.tbreg"
+	//监听消息
+	go g.watcher()
+}
+
+func (g *GameManager) watcher() {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			g.ServerMaintence()
+		case msg := <-g.msgch:
+			g.HandleMsg(msg)
+		case <-g.shut:
+			logger.Println("receive stop msg")
+			close(g.msgch)
+			return
+		}
+	}
+}
+
+func (g *GameManager) ServerMaintence() {
+	list := dcm.GetGameServerNodes()
+	nowtime := utils.Time()
+	for nid, node := range list {
+		gsid := node.Gsid
+		if _, ok := g.Serversort[gsid]; !ok {
+			logger.Println("register remote server:", gsid)
+			gid, rtype, ridx := game.GetGameParamsByGsid(gsid)
+			server := &game.GameServer{
+				Node:       node,
+				Natsaddrs:  nats.DefaultURL,
+				Status:     2,
+				Tablesort:  nil,
+				Gsid:       gsid,
+				Gid:        gid,
+				Rtype:      rtype,
+				Ridx:       ridx,
+				StartTime:  nowtime,
+				C2sTopic:   fmt.Sprintf("%s.c2s", nid),
+				SsTopic:    fmt.Sprintf("%s.ss", nid),
+				C2sDestory: fmt.Sprintf("%s.channel.destory", nid),
+				IsRemote:   true,
+			}
+			server.SetClient(g.client)
+			g.Serversort[gsid] = server
+		}
+	}
+}
+
+func (g *GameManager) HandleMsg(msg *nats.Msg) {
+	logger.Printf("handle gamemanager nats msg:%#v\n", msg)
+	switch msg.Subject {
+	case g.supTopic:
+		var server *game.GameServer
+		err := json.Unmarshal(msg.Data, &server)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		logger.Println("register remote server2:", server.Gsid)
+		if _, ok := g.Serversort[server.Gsid]; !ok {
+			server.IsRemote = true
+			g.Serversort[server.Gsid] = server
+		}
+
+	case g.sdownTopic:
+		gsid := string(msg.Data)
+		if _, ok := g.Serversort[gsid]; ok {
+			delete(g.Serversort, gsid)
+		}
+	case g.tbregTopic:
+		var table *game.GameTable
+		err := json.Unmarshal(msg.Data, &table)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		if _, ok := g.Alltablesort[table.Gsidtid]; !ok {
+			g.Alltablesort[table.Gsidtid] = table
+		}
+	}
+}
 func (g *GameManager) AfterInit() {
 
 }
 func (g *GameManager) BeforeShutdown() {
-
+	g.shut <- struct{}{}
 }
 func (g *GameManager) Shutdown() {
 
@@ -91,10 +204,28 @@ func (g *GameManager) ProcessServer(route string, body reflect.Value) {
 
 func (g *GameManager) RegisterTable(gsidtid string, table *game.GameTable) {
 	g.Alltablesort[gsidtid] = table
+	data, err := json.Marshal(table)
+	if err != nil {
+		logger.Println("RegisterTable marshal error:", err.Error())
+		return
+	}
+	err = g.client.Publish(g.tbregTopic, data)
+	if err != nil {
+		logger.Println("RegisterTable publish error:", err.Error())
+	}
 }
 
 func (g *GameManager) RegisterServer(gsid string, server *game.GameServer) {
 	g.Serversort[gsid] = server
+	data, err := json.Marshal(server)
+	if err != nil {
+		logger.Println("RegisterServer marshal error:", err.Error())
+		return
+	}
+	err = g.client.Publish(g.supTopic, data)
+	if err != nil {
+		logger.Println("RegisterServer publish error:", err.Error())
+	}
 }
 
 func (g *GameManager) GetServerSort() map[string]*game.GameServer {
@@ -110,6 +241,10 @@ func (g *GameManager) GetServerByGSID(gsid string) *game.GameServer {
 
 func (g *GameManager) RemoveServerByGSID(gsid string) {
 	delete(g.Serversort, gsid)
+	err := g.client.Publish(g.sdownTopic, []byte(gsid))
+	if err != nil {
+		logger.Printf("RemoveServerByGSID,gsid:%s, err:%s", gsid, err.Error())
+	}
 }
 
 func (g *GameManager) GetCenterServers(ngid int, ngc func(s *game.GameServer) bool) map[string]*game.GameServer {

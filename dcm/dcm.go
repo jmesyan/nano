@@ -54,3 +54,24 @@ func RegisterNode(nid string, node *nodes.Node) error {
 func DeRegisterNode(nid string) error {
 	return DCManager.DelValue(nid)
 }
+
+func GetGameServerNodes() map[string]*nodes.Node {
+	list := make(map[string]*nodes.Node)
+	kvs, err := DCManager.GetPrefixValue("gameserver_")
+	if err != nil {
+		return nil
+	}
+	for _, kv := range kvs.Pairs {
+		nid := kv.Key
+		var node *nodes.Node
+		err = serializer.Unmarshal(kv.Value, &node)
+		if err != nil || node == nil {
+			if err != nil {
+				logger.Println(err)
+			}
+			continue
+		}
+		list[nid] = node
+	}
+	return list
+}
