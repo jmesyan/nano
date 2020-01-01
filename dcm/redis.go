@@ -17,16 +17,16 @@ var (
 type RedisDCMOpts func(r *RedisDCM)
 type RedisDCM struct {
 	prefix  string
-	client  *redis.ClusterClient
-	options *redis.ClusterOptions
+	client  *redis.Client
+	options *redis.Options
 }
 
 func WithAddrs(addrs []string) RedisDCMOpts {
 	return func(r *RedisDCM) {
 		if r.options == nil {
-			r.options = &redis.ClusterOptions{}
+			r.options = &redis.Options{}
 		}
-		r.options.Addrs = addrs
+		r.options.Addr = addrs[0]
 	}
 }
 func WithPrefix(prefix string) RedisDCMOpts {
@@ -41,7 +41,8 @@ func NewRedisDCM(opts ...RedisDCMOpts) *RedisDCM {
 			opt(rs)
 		}
 	}
-	client := redis.NewClusterClient(rs.options)
+	//client := redis.NewClusterClient(rs.options)
+	client := redis.NewClient(rs.options)
 	_, err := client.Ping().Result()
 	if err != nil {
 		logger.Fatal(err)
