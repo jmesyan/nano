@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	DefaultDCMAddrs = []string{"127.0.0.1:7001", "127.0.0.1:7002", "127.0.0.1:7003", "127.0.0.1:7004", "127.0.0.1:7005", "127.0.0.1:7006"}
+	DefaultDCMAddrs = []string{"127.0.0.1:6379"}
 )
 
 type KvPair struct {
